@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+  "name": "Auth Header Injector",
+  "version": "1.0",
+  "description": "Injects x-refael header into all requests for Selenium test authentication.",
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "*://*/*"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "header-injector@selenium.test"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+  "content_scripts": [{
+    "matches": ["*://obs.4.dev.cheqzone.com/*"],
+    "js": ["inject.js"],
+    "run_at": "document_start"
+  }]
+}

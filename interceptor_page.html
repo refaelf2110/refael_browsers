@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interceptions Test Page</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:#0d1117;color:#c9d1d9;padding:24px}
+    h1{font-size:20px;color:#58a6ff;margin-bottom:6px}
+    #status{font-size:12px;color:#3fb950;margin-bottom:20px;font-family:monospace}
+    .section{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:14px}
+    .section h2{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#8b949e;margin-bottom:12px}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px}
+    label{font-size:12px;color:#8b949e;min-width:110px}
+    input[type=text],input[type=password],input[type=number],input[type=date],input[type=email],
+    textarea,select{
+      background:#0d1117;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;
+      padding:5px 9px;font-size:13px;min-width:160px}
+    textarea{min-height:60px;resize:vertical}
+    button{background:#21262d;color:#c9d1d9;border:1px solid #30363d;padding:5px 14px;
+           border-radius:6px;cursor:pointer;font-size:13px}
+    button:hover{background:#30363d}
+    button:disabled{opacity:.4;cursor:default}
+    input[type=range]{min-width:120px}
+    input[type=color]{width:48px;height:28px;padding:2px;border-radius:4px;cursor:pointer}
+    #drag-source{background:#1f6feb33;border:1px dashed #1f6feb;border-radius:6px;
+                  padding:8px 14px;cursor:grab;font-size:13px;display:inline-block}
+    #drop-target{background:#2ea04322;border:2px dashed #3fb950;border-radius:6px;
+                  padding:8px 14px;font-size:13px;display:inline-block;min-width:120px;
+                  text-align:center}
+    #drop-target.drag-over{background:#2ea04344}
+    #hover-target{background:#f0883e22;border:1px solid #f0883e55;border-radius:6px;
+                   padding:8px 14px;font-size:13px;display:inline-block;cursor:default}
+    #scroll-area{overflow:auto;height:80px;width:220px;border:1px solid #30363d;
+                  border-radius:4px;background:#0d1117}
+    #scroll-inner{height:400px;width:440px;padding:8px;font-size:12px;color:#6e7681}
+    #editable{background:#0d1117;border:1px solid #30363d;border-radius:4px;
+               padding:6px 10px;min-height:40px;font-size:13px;cursor:text}
+    canvas{border:1px solid #30363d;border-radius:4px;background:#0d1117}
+    a{color:#58a6ff}
+  </style>
+</head>
+<body>
+<h1>Interceptions Test Page</h1>
+<div id="status">Initialising interception…</div>
+
+<!-- Text inputs -->
+<div class="section">
+  <h2>Text &amp; keyboard inputs</h2>
+  <div class="row"><label>Text</label><input type="text"     id="text-input"     placeholder="type here"></div>
+  <div class="row"><label>Password</label><input type="password" id="password-input" placeholder="secret"></div>
+  <div class="row"><label>Email</label><input type="email"    id="email-input"    placeholder="user@example.com"></div>
+  <div class="row"><label>Number</label><input type="number"  id="number-input"   min="0" max="100" value="42"></div>
+  <div class="row"><label>Textarea</label><textarea id="textarea">Initial text content</textarea></div>
+  <div class="row"><label>Contenteditable</label><div id="editable" contenteditable="true">Edit me directly</div></div>
+</div>
+
+<!-- Buttons & clicks -->
+<div class="section">
+  <h2>Buttons &amp; clicks</h2>
+  <div class="row">
+    <button id="btn-click">Click Me</button>
+    <button id="btn-dblclick">Double-Click Me</button>
+    <button id="btn-context">Right-Click Me</button>
+    <button id="btn-disabled" disabled>Disabled</button>
+  </div>
+  <div class="row">
+    <a id="link" href="javascript:void(0)">Anchor Link</a>
+  </div>
+</div>
+
+<!-- Selection controls -->
+<div class="section">
+  <h2>Selection controls</h2>
+  <div class="row">
+    <label><input type="checkbox" id="checkbox"> Checkbox</label>
+    <label><input type="radio" id="radio-a" name="grp" value="a"> Radio A</label>
+    <label><input type="radio" id="radio-b" name="grp" value="b"> Radio B</label>
+  </div>
+  <div class="row">
+    <label>Select</label>
+    <select id="select">
+      <option value="a">Option A</option>
+      <option value="b">Option B</option>
+      <option value="c">Option C</option>
+    </select>
+  </div>
+  <div class="row">
+    <label>Range</label><input type="range"  id="range" min="0" max="100" value="50">
+    <label>Date</label> <input type="date"   id="date-input">
+    <label>Color</label><input type="color"  id="color-input" value="#1f6feb">
+  </div>
+</div>
+
+<!-- File upload -->
+<div class="section">
+  <h2>File upload</h2>
+  <div class="row">
+    <label>File</label><input type="file" id="file-input">
+  </div>
+</div>
+
+<!-- Mouse interactions -->
+<div class="section">
+  <h2>Mouse interactions</h2>
+  <div class="row">
+    <span id="drag-source" draggable="true">Drag me</span>
+    <span id="drop-target">Drop here</span>
+    <span id="hover-target">Hover over me</span>
+  </div>
+</div>
+
+<!-- Scroll -->
+<div class="section">
+  <h2>Scrollable area</h2>
+  <div id="scroll-area">
+    <div id="scroll-inner">
+      Scroll content — line 1<br>line 2<br>line 3<br>line 4<br>line 5<br>
+      line 6<br>line 7<br>line 8<br>line 9<br>line 10<br>line 11<br>
+    </div>
+  </div>
+</div>
+
+<!-- Canvas -->
+<div class="section">
+  <h2>Canvas</h2>
+  <canvas id="canvas" width="200" height="80"></canvas>
+</div>
+
+<!-- Form -->
+<div class="section">
+  <h2>Form</h2>
+  <form id="form">
+    <div class="row">
+      <label>Search</label>
+      <input type="text" id="form-input" name="q" placeholder="search query">
+      <button type="submit" id="form-submit">Submit</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ── 1. Lock down critical references before ANY patching ─────────── */
+  const O_getOwnPropertyNames      = Object.getOwnPropertyNames.bind(Object);
+  const O_getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor.bind(Object);
+  const O_defineProperty           = Object.defineProperty.bind(Object);
+  const R_apply                    = Reflect.apply.bind(Reflect);
+  const R_construct                = Reflect.construct.bind(Reflect);
+  const O_getPrototypeOf           = Object.getPrototypeOf.bind(Object);
+  const _DateNow                   = Date.now.bind(Date);
+  const _isArray                   = Array.isArray.bind(Array);
+  const _jsonStr                   = JSON.stringify.bind(JSON);
+  const _Error                     = Error;   // pre-capture before window.Error is wrapped
+
+  /* ── 2. Buffer state ────────────────────────────────────────────────── */
+  let _buf        = [];
+  let _action     = '_page_load_';
+  let _seq        = 0;
+  let _suppressed = false;   // true while our own API executes — skip logging
+
+  /* ── 3. Expose public API before interception so we can skip them ───── */
+  const OWN_API = new Set(['cheq_setAction', 'cheq_getBuffer', 'cheq_restoreInterceptions']);
+  window.cheq_setAction = function(name) {
+    _suppressed = true;
+    try { _action = String(name); } finally { _suppressed = false; }
+  };
+  window.cheq_getBuffer = function() {
+    _suppressed = true;
+    try {
+      /* Drop any entry whose serialised args mention our own API names.
+         This catches calls that happen during page.evaluate() setup — before
+         cheq_setAction/_suppressed can kick in — where the function source is
+         passed as an argument to an internal browser function. */
+      const OWN_NAMES = ['cheq_setAction', 'cheq_getBuffer', 'cheq_restoreInterceptions'];
+      const b = _buf.filter(function(entry) {
+        if (!entry.args) return true;
+        for (let i = 0; i < entry.args.length; i++) {
+          const a = entry.args[i];
+          if (typeof a === 'string') {
+            for (let j = 0; j < OWN_NAMES.length; j++) {
+              if (a.indexOf(OWN_NAMES[j]) !== -1) return false;
+            }
+          }
+        }
+        return true;
+      });
+      _buf = [];
+      return b;
+    } finally { _suppressed = false; }
+  };
+
+  /* ── 4. Safe serialiser (uses only pre-captured refs) ───────────────── */
+  function safeSer(val, depth) {
+    if (depth > 1) return '[deep]';
+    if (val === null) return 'null';
+    if (val === undefined) return 'undefined';
+    const t = typeof val;
+    if (t === 'boolean' || t === 'number') return '' + val;
+    if (t === 'string') return val.length > 100 ? val.slice(0, 100) + '\u2026' : val;
+    if (t === 'function') return '[Function:' + (val.name || 'anon') + ']';
+    if (t === 'symbol') return val.toString();
+    if (t !== 'object') return ('' + val).slice(0, 100);
+    try {
+      if (val instanceof Element)  return '[' + val.tagName + (val.id ? '#' + val.id : '') + ']';
+      if (val instanceof Event)    return '[Event:' + val.type + ']';
+      if (val instanceof Window)   return '[Window]';
+      if (val instanceof Node)     return '[Node:' + val.nodeName + ']';
+    } catch (_e) {}
+    if (_isArray(val)) return '[Array(' + val.length + ')]';
+    try {
+      const s = _jsonStr(val);
+      return s.length > 150 ? s.slice(0, 150) + '\u2026' : s;
+    } catch (_e) { return '[Object]'; }
+  }
+
+  function safeArgs(args) {
+    const out = [];
+    const n = args.length < 6 ? args.length : 6;
+    for (let i = 0; i < n; i++) out[i] = safeSer(args[i], 0);
+    return out;
+  }
+
+  /* ── 5. Originals registry ──────────────────────────────────────────── */
+  const originals = new Map();
+
+  function keyOf(obj, prop) {
+    try {
+      const proto = O_getPrototypeOf(obj);
+      const raw   = proto === null ? '[null-proto]' : (obj.constructor && obj.constructor.name ? obj.constructor.name : 'obj');
+      const name  = raw === 'Window' ? 'window' : raw;
+      return name + '.' + prop;
+    } catch (_e) { return 'obj.' + prop; }
+  }
+
+  /* ── 6. Objects/prototypes we must never patch ─────────────────────── */
+  const DO_NOT_TOUCH = new WeakSet([
+    Object, Function, Reflect,
+    Object.prototype, Function.prototype,
+    Array,  Array.prototype,
+    Map,    Map.prototype,
+    Set,    Set.prototype,
+    WeakSet, WeakSet.prototype,
+    WeakMap, WeakMap.prototype,
+    Error,  Error.prototype,
+    Date,   Date.prototype,
+    Promise, Promise.prototype,
+    Symbol, /* Symbol.prototype is not an object, skip */
+    Proxy,  /* Proxy has no prototype property */
+    JSON,
+  ]);
+
+  /* Property names we must never patch — automation-driver internals.
+     ChromeDriver injects cdc_… names; Puppeteer/Playwright use CDP directly
+     and don't expose window-level hooks, but guard generically. */
+  function isDriverProp(name) {
+    return typeof name === 'string' && (
+      name.indexOf('cdc_') !== -1 ||   // ChromeDriver (cdc_adoQpoasnfa76pfcZLmcfl_*)
+      name.indexOf('$cdc') !== -1 ||   // older ChromeDriver variant
+      name.indexOf('$wdc') !== -1      // WebDriver Classic variant
+    );
+  }
+
+  /* ── 7. Wrapper factory ─────────────────────────────────────────────── */
+  function wrap(obj, prop) {
+    if (OWN_API.has(prop)) return false;
+    const original = obj[prop];
+    if (typeof original !== 'function') return false;
+    const k = keyOf(obj, prop);
+    if (originals.has(k)) return false;
+    try {
+      const wrapper = function intercepted() {
+        if (_suppressed) {
+          if (new.target) return R_construct(original, arguments, original);
+          return R_apply(original, this, arguments);
+        }
+        const args          = arguments;
+        const isConstructor = !!new.target;
+        const t0            = _DateNow();
+
+        const entry = {
+          seq:           ++_seq,
+          action:        _action,
+          fn:            k,
+          args:          safeArgs(args),
+          thisArg:       safeSer(this, 0),
+          caller:        '',
+          stack:         '',
+          isConstructor: isConstructor ? 1 : 0,
+          time:          t0,
+          duration:      0,
+          returnVal:     '',
+        };
+
+        try {
+          throw new _Error('');
+        } catch (e) {
+          entry.stack = (e.stack || '').slice(0, 3000);
+          /* Extract first non-intercepted caller frame. */
+          const lines = entry.stack.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            const ln = lines[i].trim();
+            if (ln.indexOf('at ') === 0 && ln.indexOf('intercepted_') === -1) {
+              entry.caller = ln.slice(3);
+              break;
+            }
+          }
+        }
+
+        _buf.push(entry);
+
+        try {
+          const ret = isConstructor
+            ? R_construct(original, args, original)
+            : R_apply(original, this, args);
+          entry.returnVal = safeSer(ret, 0);
+          return ret;
+        } catch (callErr) {
+          entry.returnVal = '[throws:' + (callErr && callErr.message ? callErr.message.slice(0, 40) : '?') + ']';
+          throw callErr;
+        } finally {
+          entry.duration = _DateNow() - t0;
+        }
+      };
+      try { O_defineProperty(wrapper, 'name', { value: 'intercepted_' + prop, configurable: true }); } catch (_e) {}
+      O_defineProperty(obj, prop, { value: wrapper, configurable: true, writable: true });
+      originals.set(k, { obj, prop, original });
+      return true;
+    } catch (_e) { return false; }
+  }
+
+  /* ── 8. Graph walker ────────────────────────────────────────────────── */
+  function interceptAll(root) {
+    const seen     = new WeakSet();
+    const maxDepth = 6;
+
+    function walk(node, depth) {
+      if (node == null) return;
+      if (typeof node !== 'object' && typeof node !== 'function') return;
+      if (depth > maxDepth || seen.has(node) || DO_NOT_TOUCH.has(node)) return;
+      seen.add(node);
+
+      const names = O_getOwnPropertyNames(node);
+      for (let i = 0; i < names.length; i++) {
+        const prop = names[i];
+        if (isDriverProp(prop)) continue;   // never touch automation-driver internals
+        try {
+          const desc = O_getOwnPropertyDescriptor(node, prop);
+          if (!desc || !desc.configurable || !('value' in desc)) continue;
+          const val = desc.value;
+          if (typeof val === 'function') {
+            /* Skip if the value itself is a DO_NOT_TOUCH object (e.g. window.Object,
+               window.Array, window.Map) — wrapping those replaces their static methods. */
+            if (!DO_NOT_TOUCH.has(val)) wrap(node, prop);
+          } else if (typeof val === 'object' && val !== null) {
+            walk(val, depth + 1);
+          }
+        } catch (_e) {}
+      }
+      walk(O_getPrototypeOf(node), depth + 1);
+    }
+
+    walk(root, 0);
+
+    /* Explicitly walk DOM prototypes that may not be reachable within depth limit */
+    const extraNames = [
+      'EventTarget', 'Element', 'HTMLElement', 'HTMLButtonElement',
+      'HTMLInputElement', 'HTMLTextAreaElement', 'HTMLSelectElement',
+      'HTMLFormElement', 'HTMLAnchorElement', 'HTMLCanvasElement',
+      'Node', 'Document', 'Navigator', 'XMLHttpRequest',
+      'Storage', 'Performance', 'Screen', 'History',
+    ];
+    for (let i = 0; i < extraNames.length; i++) {
+      try {
+        const ctor = window[extraNames[i]];
+        if (ctor && ctor.prototype) walk(ctor.prototype, 0);
+      } catch (_e) {}
+    }
+
+    const count = originals.size;
+    document.getElementById('status').textContent =
+      '\u2705 Interception active \u2014 ' + count + ' functions patched.';
+    try { console.log('[interceptor] Patched ' + count + ' functions.'); } catch (_e) {}
+    return count;
+  }
+
+  /* ── 9. Restore ─────────────────────────────────────────────────────── */
+  window.cheq_restoreInterceptions = function() {
+    _suppressed = true;
+    try {
+      for (const { obj, prop, original } of originals.values()) {
+        try { O_defineProperty(obj, prop, { value: original, configurable: true, writable: true }); } catch (_e) {}
+      }
+      originals.clear();
+      _buf = [];
+      _seq = 0;
+      document.getElementById('status').textContent = '\u267b\ufe0f Originals restored.';
+    } finally { _suppressed = false; }
+  };
+
+  /* ── 10. Prevent page navigation from form/link ─────────────────────── */
+  document.getElementById('form').addEventListener('submit', function(e) { e.preventDefault(); });
+  document.getElementById('drag-source').addEventListener('dragstart', function(e) {
+    e.dataTransfer.setData('text/plain', 'drag-source');
+  });
+  document.getElementById('drop-target').addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.classList.add('drag-over');
+  });
+  document.getElementById('drop-target').addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    this.textContent = 'Dropped!';
+  });
+  document.getElementById('drop-target').addEventListener('dragleave', function() {
+    this.classList.remove('drag-over');
+  });
+
+  /* ── 11. Auto-start ─────────────────────────────────────────────────── */
+  interceptAll(window);
+
+})();
+</script>
+</body>
+</html>

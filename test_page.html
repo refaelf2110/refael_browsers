@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>loading</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 40px 48px;
+      max-width: 640px;
+      width: 100%;
+      text-align: center;
+    }
+    .icon { font-size: 72px; line-height: 1; margin-bottom: 16px; }
+    h1 { font-size: 26px; margin-bottom: 10px; }
+    .subtitle { font-size: 14px; color: #8b949e; margin-bottom: 24px; }
+    .detail-box {
+      text-align: left;
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.9;
+    }
+    .detail-box code {
+      background: #1f2937;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #c9d1d9;
+    }
+    .check-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 2px; }
+    .check-tick { flex-shrink: 0; }
+    .result-box {
+      margin-top: 16px;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 12px;
+      text-align: left;
+    }
+    .result-detected { background: #2d1117; border: 1px solid #8b1a1a; color: #f85149; }
+    .result-clean    { background: #0d2818; border: 1px solid #238636; color: #3fb950; }
+    .ua { margin-top: 20px; font-size: 10px; color: #484f58; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="icon" id="icon">⏳</div>
+    <h1 id="heading">Checking…</h1>
+    <p class="subtitle" id="subtitle"></p>
+    <div class="detail-box" id="checks-list"></div>
+    <div id="result-box" class="result-box"></div>
+    <p class="ua" id="ua"></p>
+  </div>
+
+  <script>
+    // HEADLESS_BY_MEDIA_QUERY detection
+    //
+    // Source: adserver wp_clientSideDetection.js — isHeadlessByMediaQuery
+    // Server trigger condition (FraudDetection.js line ~1361):
+    //   isHeadlessByMediaQuery && maxTouchPoints === 0 && no audio devices
+    //
+    // Headless browsers (Playwright, Puppeteer, Selenium headless) have no
+    // physical pointer or hover input device and no touch screen.
+    // matchMedia('any-*') queries report the union across all input devices.
+
+    function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+    var checks = [];
+
+    function addCheck(id, label, code, triggered, note) {
+      checks.push({ id: id, label: label, code: code, triggered: triggered, note: note || '' });
+    }
+
+    // ── Synchronous checks ────────────────────────────────────────────────────
+
+    var hasMM = !!window.matchMedia;
+
+    var anyPointerNone   = hasMM && window.matchMedia('(any-pointer: none)').matches;
+    var anyHoverNone     = hasMM && window.matchMedia('(any-hover: none)').matches;
+    var anyPointerCoarse = hasMM && window.matchMedia('(any-pointer: coarse)').matches;
+    var anyPointerFine   = hasMM && window.matchMedia('(any-pointer: fine)').matches;
+    var noTouch          = navigator.maxTouchPoints === 0;
+
+    addCheck('any-pointer-none',
+      'any-pointer: none',
+      "matchMedia('(any-pointer: none)').matches",
+      anyPointerNone,
+      'True when the browser reports NO pointer device of any kind. Headless browsers have no mouse/touch.'
+    );
+    addCheck('any-hover-none',
+      'any-hover: none',
+      "matchMedia('(any-hover: none)').matches",
+      anyHoverNone,
+      'True when no input device can hover. Headless browsers cannot hover.'
+    );
+    addCheck('any-pointer-not-coarse',
+      'any-pointer NOT coarse (no touch)',
+      "!matchMedia('(any-pointer: coarse)').matches",
+      !anyPointerCoarse,
+      'Coarse pointer = touchscreen. Absence confirms not a touch-only device falsely triggering the above.'
+    );
+    addCheck('any-pointer-not-fine',
+      'any-pointer NOT fine (no mouse)',
+      "!matchMedia('(any-pointer: fine)').matches",
+      !anyPointerFine,
+      'Fine pointer = mouse/stylus. Absence confirms there is genuinely no pointing device.'
+    );
+    addCheck('max-touch-points-zero',
+      'navigator.maxTouchPoints === 0',
+      'navigator.maxTouchPoints === 0',
+      noTouch,
+      'Part of the server-side condition. Desktop with mouse has 0, but combined with the above it narrows to headless.'
+    );
+
+    // Core media-query signal (mirrors isHeadlessByMediaQuery in client-side code)
+    var isHeadlessByMediaQuery = anyPointerNone && anyHoverNone && !anyPointerCoarse && !anyPointerFine;
+
+    // ── Async: enumerate audio devices ───────────────────────────────────────
+    // Then finalise title after result is known.
+
+    function finalise(noAudioDevices) {
+      addCheck('no-audio-devices',
+        'No speakers or microphones',
+        "enumerateDevices() → no audioinput / audiooutput",
+        noAudioDevices,
+        'Headless containers have no audio hardware. Requires MediaDevices API.'
+      );
+
+      // Full HEADLESS_BY_MEDIA_QUERY condition (mirrors FraudDetection.js ~line 1361)
+      var detected = isHeadlessByMediaQuery && noTouch && noAudioDevices;
+
+      document.title = detected ? 'DETECTED: headless-by-media-query' : 'CLEAN';
+      render(detected);
+    }
+
+    // Try to enumerate devices; fall back gracefully if API unavailable
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then(function(devices) {
+        var hasSpeaker = devices.some(function(d) { return d.kind === 'audiooutput'; });
+        var hasMic     = devices.some(function(d) { return d.kind === 'audioinput'; });
+        finalise(!hasSpeaker && !hasMic);
+      }).catch(function() {
+        finalise(true); // treat enumeration failure as no devices
+      });
+    } else {
+      finalise(true); // no API → treat as no devices
+    }
+
+    // ── Render UI ─────────────────────────────────────────────────────────────
+    function render(detected) {
+      var card    = document.getElementById('card');
+      var icon    = document.getElementById('icon');
+      var heading = document.getElementById('heading');
+      var sub     = document.getElementById('subtitle');
+      var list    = document.getElementById('checks-list');
+      var box     = document.getElementById('result-box');
+
+      if (detected) {
+        card.style.borderColor = '#8b1a1a';
+        icon.textContent       = '\u2717';
+        icon.style.color       = '#f85149';
+        heading.textContent    = 'Automated Browser Detected';
+        heading.style.color    = '#f85149';
+        sub.textContent        = 'HEADLESS_BY_MEDIA_QUERY — all conditions met';
+      } else {
+        card.style.borderColor = '#238636';
+        icon.textContent       = '\u2713';
+        icon.style.color       = '#3fb950';
+        heading.textContent    = 'Not Detected';
+        heading.style.color    = '#3fb950';
+        sub.textContent        = 'Does not meet HEADLESS_BY_MEDIA_QUERY criteria';
+      }
+
+      checks.forEach(function(c) {
+        var row  = document.createElement('div');
+        row.className = 'check-row';
+        var tick = document.createElement('span');
+        tick.className   = 'check-tick';
+        tick.textContent = c.triggered ? '\u2717' : '\u2713';
+        tick.style.color = c.triggered ? '#f85149' : '#3fb950';
+        var lbl  = document.createElement('span');
+        lbl.style.color = c.triggered ? '#c9d1d9' : '#8b949e';
+        lbl.innerHTML   = c.label + ' &mdash; <code>' + c.code + '</code>';
+        row.appendChild(tick);
+        row.appendChild(lbl);
+        list.appendChild(row);
+        if (c.note) {
+          var note = document.createElement('div');
+          note.style.cssText = 'font-size:11px;color:#6e7681;padding:1px 0 6px 22px;line-height:1.4;';
+          note.textContent = c.note;
+          list.appendChild(note);
+        }
+      });
+
+      if (detected) {
+        box.className   = 'result-box result-detected';
+        box.textContent = 'All HEADLESS_BY_MEDIA_QUERY conditions satisfied: no pointer, no hover, no touch, no audio devices.';
+      } else {
+        box.className   = 'result-box result-clean';
+        box.textContent = 'Not all conditions met — browser does not match the headless-by-media-query profile.';
+      }
+
+      document.getElementById('ua').textContent = navigator.userAgent;
+    }
+  </script>
+</body>
+</html>
