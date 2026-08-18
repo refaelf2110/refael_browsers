@@ -17,7 +17,7 @@ resource "aws_amplify_app" "refael_dashboard" {
           phases:
             preBuild:
               commands:
-                - npm ci
+                - npm install --legacy-peer-deps
             build:
               commands:
                 - npm run build
