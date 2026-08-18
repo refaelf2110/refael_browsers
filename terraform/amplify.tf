@@ -17,6 +17,8 @@ resource "aws_amplify_app" "refael_dashboard" {
           phases:
             preBuild:
               commands:
+                - nvm install 18
+                - nvm use 18
                 - npm install --legacy-peer-deps
             build:
               commands:
