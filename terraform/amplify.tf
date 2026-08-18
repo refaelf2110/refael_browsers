@@ -17,14 +17,12 @@ resource "aws_amplify_app" "refael_dashboard" {
           phases:
             preBuild:
               commands:
-                - nvm install 18
-                - nvm use 18
-                - npm install --legacy-peer-deps
+                - npm install
             build:
               commands:
                 - npm run build
           artifacts:
-            baseDirectory: build
+            baseDirectory: dist
             files:
               - '**/*'
           cache:
@@ -33,9 +31,7 @@ resource "aws_amplify_app" "refael_dashboard" {
   EOT
 
   environment_variables = {
-    REACT_APP_API_URL = "https://${aws_api_gateway_rest_api.refael.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.refael_prod.stage_name}"
-    _CUSTOM_IMAGE      = "aws/codebuild/standard:7.0"
-    NODE_VERSION       = "18"
+    VITE_API_URL = "https://${aws_api_gateway_rest_api.refael.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.refael_prod.stage_name}"
   }
 
   # Allow Amplify to auto-detect the framework
