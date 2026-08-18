@@ -7,6 +7,7 @@ import Diff from './pages/Diff';
 import CanIRun from './pages/CanIRun';
 import Interceptions from './pages/Interceptions';
 import InterceptionDetail from './pages/InterceptionDetail';
+import Browsers from './pages/Browsers';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/canirun" element={<CanIRun />} />
         <Route path="/interceptions" element={<Interceptions />} />
         <Route path="/interceptions/:id" element={<InterceptionDetail />} />
+        <Route path="/browsers" element={<Browsers />} />
       </Routes>
     </BrowserRouter>
   );

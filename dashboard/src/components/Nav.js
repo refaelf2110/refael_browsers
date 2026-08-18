@@ -48,6 +48,7 @@ export default function Nav() {
       <NavLink to="/diff">Property Diff</NavLink>
       <NavLink to="/canirun">Can I Run</NavLink>
       <NavLink to="/interceptions" color="#f0883e">Interceptions</NavLink>
+      <NavLink to="/browsers" color="#3fb950">Run Browsers</NavLink>
     </nav>
   );
 }
