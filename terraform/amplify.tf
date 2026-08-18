@@ -17,7 +17,6 @@ resource "aws_amplify_app" "refael_dashboard" {
           phases:
             preBuild:
               commands:
-                - nvm use 18
                 - npm install --legacy-peer-deps
             build:
               commands:
@@ -33,6 +32,8 @@ resource "aws_amplify_app" "refael_dashboard" {
 
   environment_variables = {
     REACT_APP_API_URL = "https://${aws_api_gateway_rest_api.refael.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_api_gateway_stage.refael_prod.stage_name}"
+    _CUSTOM_IMAGE      = "aws/codebuild/standard:7.0"
+    NODE_VERSION       = "18"
   }
 
   # Allow Amplify to auto-detect the framework
