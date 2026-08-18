@@ -31,9 +31,6 @@ RUN npm install
 # (Chrome and Firefox are pulled from S3 at container startup by sync_browsers_from_s3.js)
 RUN npx playwright install msedge msedge-beta msedge-dev
 
-# Install Windows Media Foundation — required by Playwright's bundled Firefox
-RUN powershell -Command "Install-WindowsFeature -Name Server-Media-Foundation -ErrorAction SilentlyContinue"
-
 # Install Visual C++ Redistributable — provides msvcp140_1.dll required by Firefox
 RUN Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile C:\vcredist.exe; `
     Start-Process C:\vcredist.exe -Wait -ArgumentList '/quiet /norestart'; `

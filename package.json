@@ -1,0 +1,21 @@
+{
+  "name": "playwright-browser-matrix",
+  "version": "1.0.0",
+  "description": "Runs all available browser versions via Playwright, Puppeteer, and Selenium and prints results",
+  "main": "run_all.js",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1112.0",
+    "@aws-sdk/credential-providers": "^3.1112.0",
+    "@dsnp/parquetjs": "^1.8.8",
+    "@puppeteer/browsers": "latest",
+    "better-sqlite3": "^12.11.1",
+    "cypress": "latest",
+    "express": "^5.2.1",
+    "playwright": "latest",
+    "puppeteer-core": "latest",
+    "selenium-webdriver": "latest",
+    "taiko": "latest",
+    "testcafe": "latest",
+    "webdriverio": "^8"
+  }
+}

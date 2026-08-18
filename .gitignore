@@ -1,0 +1,6 @@
+node_modules/
+browser-cache/
+terraform/.terraform/
+terraform/*.zip
+terraform/lambda_src/*.zip
+*.log

@@ -1,0 +1,703 @@
+<html>
+<body>
+
+<script>
+
+async function loop_promises() {
+    for (let i = 0; i < window_promises.length; i++) {
+		try {
+			await promiseTimeout(3000, eval(window_promises[i] + "()"))
+				.then(function(promise){
+					store_data("/Name: " + window_promises[i] + " /PromiseType: " + typeof promise + " /Value: " + promise);
+					if (promise.length > 0) {
+						for (j = 0; j < promise.length; j++) {
+							for (promise_property in promise[j]) {
+								//console.log("/Name: " + window_promises[i] + "." + promise_property + " /PromiseType: " + typeof promise[j][promise_property] + " /Value: " + promise[j][promise_property]);
+								store_data("/Name: " + window_promises[i] + "." + promise_property + " /PromiseType: " + typeof promise[j][promise_property] + " /Value: " + promise[j][promise_property]);
+							}
+						}
+					}
+					else {
+						for (promise_property in promise) {
+						//console.log("/Name: " + window_promises[i] + "." + promise_property + " /PromiseType: " + typeof promise_property + " /Value: " + promise_property);
+						store_data("/Name: " + window_promises[i] + "." + promise_property + " /PromiseType: " + typeof promise_property + " /Value: " + promise_property);
+						}
+					}
+				
+				})
+				.catch(function(e){
+					if (e == "1") {
+						store_data("/Name: " + window_promises[i] + " /PromiseType: Timeout /Value: Timed out");
+					}
+					else {
+						store_data("/Name: " + window_promises[i] + " /PromiseType: Failure /Value: Failed");
+					}
+			});
+		}
+		catch(e){
+			store_data("/Name: " + window_promises[i] + " /PromiseType: Raised exception /Value: " + e);
+		}
+    }
+};
+
+function promiseTimeout(ms, promise) {
+	return new Promise(function(resolve, reject) {
+		// create a timeout to reject promise if not resolved
+		var timer = setTimeout(function(){
+			reject("1")
+		}, ms);
+
+	promise
+		.then(function(res){
+			clearTimeout(timer);
+			resolve(res);
+		})
+		.catch(function(e){
+			clearTimeout(timer);
+			reject(String(e));
+		});
+	});
+};
+
+function store_data(data_line)
+{
+	vars_result.push(data_line);
+	counter_total++;
+}
+
+function array_to_object (array)
+{
+	var obj = {};
+	for (k = 0; k < array.length; k++)
+	{
+		obj[array[k]] = "";
+	}
+	
+	return obj;
+}
+
+function object_to_array (object)
+{
+	var array = [];
+	for (a in object)
+	{
+		array.push(a);
+	}
+	return array;
+}
+
+function make_uniques_array (a, b)
+{
+	var c = a.concat(b.filter(function (item) {
+    return a.indexOf(item) < 0;
+	}));
+	return c;
+}
+
+function make_final_array (object_str)
+{
+	var vars_get_own_prprty = [];
+	try {
+		vars_get_own_prprty = Object.getOwnPropertyNames(eval(object_str));
+	}
+	catch(e){};
+	var vars_for_loop = [];
+	try {
+		vars_for_loop = object_to_array (eval(object_str));
+	}
+	catch(e){};	
+	if (vars_get_own_prprty.length > 0 && vars_for_loop.length > 0)
+	{
+		vars_array = make_uniques_array(vars_get_own_prprty, vars_for_loop)
+	}
+	else if (vars_get_own_prprty.length > 0)
+	{
+		vars_array = vars_get_own_prprty;
+	}
+	else if (vars_for_loop.length > 0)
+	{
+		vars_array = vars_for_loop;
+	}
+	else
+	{
+		vars_array = [];
+	}
+	
+	return array_to_object(vars_array);
+}
+
+var get_vars_depth = 0;
+var get_vars_counter = 0;
+
+// All names defined by this script — excluded from window enumeration so they
+// don't appear as browser properties in diff/canirun results.
+var _INTERNAL_VARS = new Set([
+  // explicitly declared variables
+  'get_vars_depth','get_vars_counter','_INTERNAL_VARS',
+  'vars_result','funcs','counter_total','eval_result','func_to_run',
+  'window_promises','cheq_object123','allElements','container',
+  '_extractor_done_div','audioContext','context','oscillator','gainNode',
+  'compressor','canvas_2d','canvas_webgl','canvas_webgl2',
+  'canvas_experimental','canvas_bitmap','ctx_2d','gl','gl2','ex_gl','bmr',
+  'map_elem','form_elem','select_elem','table_elem','inputTypes',
+  // functions defined by this script
+  'get_vars','make_final_array','make_uniques_array','object_to_array',
+  'array_to_object','promiseTimeout','loop_promises','store_data',
+  'hasRepeatingPattern','createElementSafely',
+  // implicit globals from missing var declarations inside functions
+  'object_full_path','vars_array','nativenes','nativenes2',
+  'getter_nativenes','getter','double_to_string','func',
+  'a','j','k',
+]);
+
+// Function to detect repeating patterns in object paths to prevent infinite loops
+function hasRepeatingPattern(path, segmentCount) {
+	segmentCount = segmentCount || 3; // Default: check last 3 segments
+	var parts = path.split('.');
+	
+	// Need at least segmentCount * 2 parts to have a repeat
+	if (parts.length < segmentCount * 2) {
+		return false;
+	}
+	
+	// Get the last N segments
+	var lastSegments = parts.slice(-segmentCount).join('.');
+	
+	// Check if this pattern appears earlier in the path (before the last occurrence)
+	var lastIndex = path.lastIndexOf(lastSegments);
+	if (lastIndex === -1) {
+		return false;
+	}
+	
+	// Check if it appears before the last occurrence
+	var beforeLast = path.substring(0, lastIndex);
+	return beforeLast.indexOf(lastSegments) !== -1;
+}
+
+function get_vars (object)
+{
+	get_vars_depth++;
+	if (get_vars_depth === 1) {
+		get_vars_counter = 0;
+	}
+	
+	for (a in make_final_array(object))
+	{
+		get_vars_counter++;
+		object_full_path = object + "." + a;
+		
+		if (!_INTERNAL_VARS.has(a) && a != "content" && a != "self" && a != "window" && a != "Window" && a != "frames" && a != "parent" && a != "parentElement" && a != "firstChild" && a != "firstElementChild" && a != "nextSibling" && a != "nextElementSibling" && a != "previousElementSibling" && a != "previousSibling" && a != "lastChild" && a != "lastElementChild" && a != "parentNode" && a != "top" && a != "defaultView" && a != "scrollingElement" && a != "activeElement" && a != "src" && a != "head" && a != "body" && a != "innerHTML" && a != "outerHTML" && a != "textContent" && a != "currentScript" && a != "globalThis" && isNaN(a) && a != "parentWindow" &&
+		object_full_path.indexOf("_gat.D") == -1 &&
+		object_full_path.indexOf("_gat.S") == -1 &&
+		object_full_path.indexOf("document.onreadystatechange") == -1 &&
+		object_full_path.indexOf("ownerDocument") == -1 &&
+		object_full_path.indexOf("applicationCache.mozItems") == -1 &&
+		object_full_path.indexOf("applicationCache.mozLength") == -1 &&
+		object_full_path.indexOf("ownerElement.attributes") == -1 &&
+		object_full_path.indexOf("prototype.constructor") == -1 &&
+		object_full_path.indexOf("shadowRoot.host.attributes") == -1 &&
+		object_full_path.indexOf("shadowRoot.host.shadowRoot") == -1 &&
+		object_full_path.indexOf("context.destination.context") == -1 &&
+		object_full_path.indexOf("window.event.currentTarget") == -1 &&
+		object_full_path.indexOf("sheet.ownerNode.sheet") == -1 &&
+		object_full_path.indexOf("sheet.ownerNode.attributes") == -1 &&
+		object_full_path.indexOf("attributes.class.ownerElement") == -1 &&
+		object_full_path.indexOf("window.event.srcElement.documentElement") == -1 &&
+		object_full_path.indexOf("window.event.target.documentElement") == -1)
+		
+		{
+			try
+			{
+				var object_eval = eval(object_full_path);
+				if (typeof object_eval != "object")
+				{
+					if (typeof object_eval == "function") 
+					{
+						funcs.push(object_full_path);
+						func = String(object_eval);
+						if (func.indexOf("[native code]") == -1) {
+							nativenes = " /Value: NOT NATIVE FUNC.";
+						}
+						else {
+							nativenes = " /Value: [native code].";
+						}
+						
+						var double_to_string = eval(object_full_path + ".toString");
+						func = String(double_to_string);
+						if (func.indexOf("[native code]") == -1) {
+							nativenes2 = " DOUBLE NOT NATIVE FUNC - ";
+						}
+						else {
+							nativenes2 = " DOUBLE [native code] - ";
+						}
+						
+						if (object_full_path.indexOf("window.console") == -1 &&
+							object_full_path.indexOf("window.history.back") == -1 &&
+							object_full_path.indexOf("window.history.forward") == -1 &&
+							object_full_path.indexOf("history.go") == -1 &&
+							a != "replaceWith" &&
+							a != "close" &&
+							a != "stop" &&
+							a != "focus" &&
+							a != "blur" &&
+							a != "open" &&
+							a != "alert" &&
+							a != "confirm" &&
+							a != "prompt" &&
+							a != "print" &&
+							a != "reload" &&
+							a != "click" &&
+							a != "remove" &&
+							a != "clear" &&
+							a != "createShadowRoot" &&
+							a != "write" &&
+							a != "writeln" &&
+							a != "onload") {
+							
+							eval_result = "";
+							func_to_run = object_full_path + "()";
+							
+							try {
+								eval_result = eval(object_full_path + "()");
+							}
+							catch (e) {
+								store_data("/Name: " + object_full_path + " /Type: raised_exception/Value: " + e +'');
+								if (String(e).indexOf("'new'") != -1) {
+									try {
+										eval_result = eval("new " + object_full_path + "()");
+										func_to_run = "new " + object_full_path + "()";
+									}
+									catch(e) {store_data("/Name: " + object_full_path + " /Type: raised_exception/Value: " + e +'');}
+								}
+							}
+							
+							if (eval_result == "[object Object]") {
+								if (!hasRepeatingPattern(func_to_run, 3)) {
+									get_vars(func_to_run);
+								} else {
+									store_data("/Name: " + func_to_run + " /Type: RecursionPrevented /Value: Repeating pattern detected - skipping recursion");
+								}
+							}
+							else if (eval_result == "[object Promise]") {
+								window_promises.push(object_full_path);
+							}
+							
+							//vars_result.push("/Name: " + object_full_path + " /Type: " + typeof object_eval + nativenes + eval_result);
+							//console.log("/Name: " + object_full_path + " /Type: " + typeof object_eval + nativenes + eval_result);
+							store_data("/Name: " + object_full_path + " /Type: " + typeof object_eval + nativenes + nativenes2 + eval_result);
+						}
+						
+						else {
+							eval_result = "None";
+						}
+					}
+					else
+					{
+						//vars_result.push("/Name: " + object_full_path + " /Type: " + typeof object_eval + " /Value: " + object_eval);
+						//console.log("/Name: " + object_full_path + " /Type: " + typeof object_eval + " /Value: " + object_eval);
+						store_data("/Name: " + object_full_path + " /Type: " + typeof object_eval + " /Value: " + object_eval);
+					}
+				}
+				else
+				{
+					var descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(object_eval), 'type');
+					if (descriptor && descriptor.get) {
+						getter = descriptor.get + '';
+						if (getter.indexOf("[native code]") == -1) {
+							getter_nativenes = " /Getter: NOT NATIVE GETTER.";
+						}
+						else {
+							getter_nativenes = " /Getter: [native code].";
+						}
+					} else {
+						getter_nativenes = " /Getter: NO GETTER.";
+					}
+					//vars_result.push("/Name: " + object_full_path + " /Type: " + typeof object_eval + " /Value: " + object_eval);
+					//console.log("/Name: " + object_full_path + " /Type: " + typeof object_eval + " /Value: " + object_eval);
+					store_data("/Name: " + object_full_path + " /Type: " + typeof object_eval + getter_nativenes + " /Value: " + object_eval);
+						
+					if (!hasRepeatingPattern(object_full_path, 3)) {
+						get_vars(object_full_path);
+					} else {
+						store_data("/Name: " + object_full_path + " /Type: RecursionPrevented /Value: Repeating pattern detected - skipping recursion");
+					}
+				}
+			}
+			catch (e)
+			{
+				store_data("/Name: " + object_full_path + " /Type: raised_exception/Value: " + e +'');
+			}
+		}
+	}
+	
+	get_vars_depth--;
+}
+
+
+/*
+function build_async_foreach({
+						success =() => console.log(arguments.callee, 'SUCCCESS'), 
+						fail = e=> console.log('--ERROR:',e), 
+						timeout = 5000,
+						timeoutMessage = 'TIMEOUT'
+						}={}) {
+	return function _asyncForEach(funcs){
+			return funcs.reduce((result, {method, path}) => 
+					result
+						.then(()=>{
+							setTimeout(()=>Promise.reject(timeoutMessage), timeout)
+							return method().then(success(path));
+						})
+						.catch(fail(path)), Promise.resolve())				
+	}
+}
+*/
+
+// Run get_vars after a short delay (lets audio context and element creation settle).
+// loop_promises is intentionally not called — it is preserved for manual use only.
+setTimeout(function(){
+	get_vars("window");
+	var done = document.getElementById('extractor-data');
+	if (done) done.textContent = 'DONE';
+}, 2000);
+
+
+var vars_result = [];
+var funcs = [];
+// Completion signal — set to 'DONE' after get_vars finishes so automation can detect readiness.
+var _extractor_done_div = document.createElement('div');
+_extractor_done_div.id = 'extractor-data';
+_extractor_done_div.style.display = 'none';
+document.body.appendChild(_extractor_done_div);
+var counter_total = 0;
+var eval_result;
+var func_to_run;
+var window_promises = [];
+const cheq_object123 = {property1: "value1"};
+
+// Create container for all elements
+var container = document.createElement('div');
+container.style.display = 'none';
+document.body.appendChild(container);
+
+// Audio context for audio fingerprinting
+var audioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+if (audioContext) {
+	try {
+var context = new audioContext(1, 44100, 44100);
+var oscillator = context.createOscillator();
+oscillator.type = "sine";
+oscillator.frequency.setValueAtTime(10000, 0);
+var gainNode = context.createGain();
+var compressor = context.createDynamicsCompressor();
+compressor.threshold.setValueAtTime(-50, context.currentTime);
+compressor.knee.setValueAtTime(40, context.currentTime);
+compressor.ratio.setValueAtTime(12, context.currentTime);
+compressor.attack.setValueAtTime(0, context.currentTime);
+compressor.release.setValueAtTime(0.25, context.currentTime);
+oscillator.connect(compressor);
+compressor.connect(context.destination);
+oscillator.start(0);
+context.startRendering();
+		store_data("/Name: OfflineAudioContext /Type: AudioContext /Status: SUCCESS /Value: Audio context created and rendering started");
+	} catch(e) {
+		store_data("/Name: OfflineAudioContext /Type: AudioContext /Status: FAILED /Error: " + String(e));
+	}
+} else {
+	store_data("/Name: OfflineAudioContext /Type: AudioContext /Status: FAILED /Value: OfflineAudioContext not available");
+}
+
+// Function to create element with error handling and logging
+function createElementSafely(tagName, parent, attributes) {
+	var attrInfo = attributes ? JSON.stringify(attributes) : 'none';
+	var parentInfo = parent ? parent.tagName || 'document' : 'none';
+	
+	try {
+		var elem = document.createElement(tagName);
+		var attrErrors = [];
+		
+		if (attributes) {
+			for (var attr in attributes) {
+				try {
+					elem[attr] = attributes[attr];
+				} catch(e) {
+					try {
+						elem.setAttribute(attr, attributes[attr]);
+					} catch(e2) {
+						attrErrors.push(attr + ': ' + String(e2));
+					}
+				}
+			}
+		}
+		
+		var appendError = null;
+		if (parent) {
+			try {
+				parent.appendChild(elem);
+			} catch(e) {
+				appendError = String(e);
+			}
+		}
+		
+		// Log successful creation
+		var successMsg = "/Name: createElement." + tagName + " /Type: ElementCreation /Status: SUCCESS /Parent: " + parentInfo + " /Attributes: " + attrInfo;
+		if (attrErrors.length > 0) {
+			successMsg += " /AttributeErrors: " + attrErrors.join('; ');
+		}
+		if (appendError) {
+			successMsg += " /AppendError: " + appendError;
+		}
+		store_data(successMsg);
+		
+		return elem;
+	} catch(e) {
+		// Log failed creation
+		var errorMsg = "/Name: createElement." + tagName + " /Type: ElementCreation /Status: FAILED /Parent: " + parentInfo + " /Attributes: " + attrInfo + " /Error: " + String(e);
+		store_data(errorMsg);
+		return null;
+	}
+}
+
+// All HTML5 elements organized by category
+var allElements = [];
+
+// Document metadata
+allElements.push(createElementSafely('base', document.head, {href: 'https://example.com/'}));
+allElements.push(createElementSafely('meta', document.head, {charset: 'UTF-8'}));
+allElements.push(createElementSafely('meta', document.head, {name: 'viewport', content: 'width=device-width'}));
+allElements.push(createElementSafely('title', document.head));
+allElements.push(createElementSafely('style', document.head));
+allElements.push(createElementSafely('link', document.head, {rel: 'stylesheet', href: 'https://www.w3schools.com/tags/styles.css'}));
+allElements.push(createElementSafely('template', document.body));
+
+// Content sectioning
+allElements.push(createElementSafely('address', container));
+allElements.push(createElementSafely('article', container));
+allElements.push(createElementSafely('aside', container));
+allElements.push(createElementSafely('footer', container));
+allElements.push(createElementSafely('header', container));
+allElements.push(createElementSafely('h1', container));
+allElements.push(createElementSafely('h2', container));
+allElements.push(createElementSafely('h3', container));
+allElements.push(createElementSafely('h4', container));
+allElements.push(createElementSafely('h5', container));
+allElements.push(createElementSafely('h6', container));
+allElements.push(createElementSafely('main', container));
+allElements.push(createElementSafely('nav', container));
+allElements.push(createElementSafely('section', container));
+
+// Text content
+allElements.push(createElementSafely('blockquote', container));
+allElements.push(createElementSafely('dd', container));
+allElements.push(createElementSafely('div', container));
+allElements.push(createElementSafely('dl', container));
+allElements.push(createElementSafely('dt', container));
+allElements.push(createElementSafely('figcaption', container));
+allElements.push(createElementSafely('figure', container));
+allElements.push(createElementSafely('hr', container));
+allElements.push(createElementSafely('li', container));
+allElements.push(createElementSafely('ol', container));
+allElements.push(createElementSafely('p', container));
+allElements.push(createElementSafely('pre', container));
+allElements.push(createElementSafely('ul', container));
+
+// Inline text semantics
+allElements.push(createElementSafely('a', container, {href: 'https://example.com'}));
+allElements.push(createElementSafely('abbr', container, {title: 'Abbreviation'}));
+allElements.push(createElementSafely('b', container));
+allElements.push(createElementSafely('bdi', container));
+allElements.push(createElementSafely('bdo', container, {dir: 'rtl'}));
+allElements.push(createElementSafely('br', container));
+allElements.push(createElementSafely('cite', container));
+allElements.push(createElementSafely('code', container));
+allElements.push(createElementSafely('data', container, {value: '123'}));
+allElements.push(createElementSafely('dfn', container));
+allElements.push(createElementSafely('em', container));
+allElements.push(createElementSafely('i', container));
+allElements.push(createElementSafely('kbd', container));
+allElements.push(createElementSafely('mark', container));
+allElements.push(createElementSafely('q', container, {cite: 'https://example.com'}));
+allElements.push(createElementSafely('rb', container));
+allElements.push(createElementSafely('rp', container));
+allElements.push(createElementSafely('rt', container));
+allElements.push(createElementSafely('rtc', container));
+allElements.push(createElementSafely('ruby', container));
+allElements.push(createElementSafely('s', container));
+allElements.push(createElementSafely('samp', container));
+allElements.push(createElementSafely('small', container));
+allElements.push(createElementSafely('span', container));
+allElements.push(createElementSafely('strong', container));
+allElements.push(createElementSafely('sub', container));
+allElements.push(createElementSafely('sup', container));
+allElements.push(createElementSafely('time', container, {datetime: '2024-01-01'}));
+allElements.push(createElementSafely('u', container));
+allElements.push(createElementSafely('var', container));
+allElements.push(createElementSafely('wbr', container));
+
+// Image and multimedia
+var map_elem = createElementSafely('map', container, {name: 'testmap'});
+allElements.push(map_elem);
+allElements.push(createElementSafely('area', map_elem, {shape: 'rect', coords: '0,0,100,100', href: 'https://example.com'}));
+allElements.push(createElementSafely('audio', container, {src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', controls: true}));
+allElements.push(createElementSafely('img', container, {src: 'https://picsum.photos/150/150', alt: 'Test image', width: '150', height: '150'}));
+allElements.push(createElementSafely('track', container, {kind: 'subtitles', src: 'https://example.com/track.vtt', srclang: 'en'}));
+allElements.push(createElementSafely('video', container, {src: 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4', width: '320', height: '240', controls: true}));
+allElements.push(createElementSafely('picture', container));
+allElements.push(createElementSafely('source', container, {srcset: 'https://picsum.photos/300/300', media: '(min-width: 600px)'}));
+allElements.push(createElementSafely('svg', container, {width: '100', height: '100'}));
+var canvas_2d = createElementSafely('canvas', container, {width: '200', height: '200'});
+allElements.push(canvas_2d);
+var canvas_webgl = createElementSafely('canvas', container, {width: '200', height: '200'});
+allElements.push(canvas_webgl);
+var canvas_webgl2 = createElementSafely('canvas', container, {width: '200', height: '200'});
+allElements.push(canvas_webgl2);
+var canvas_experimental = createElementSafely('canvas', container, {width: '200', height: '200'});
+allElements.push(canvas_experimental);
+var canvas_bitmap = createElementSafely('canvas', container, {width: '200', height: '200'});
+allElements.push(canvas_bitmap);
+
+// Canvas contexts
+try {
+	var ctx_2d = canvas_2d ? canvas_2d.getContext("2d") : null;
+	if (ctx_2d) {
+		ctx_2d.fillStyle = 'red';
+		ctx_2d.fillRect(0, 0, 50, 50);
+		store_data("/Name: canvas.getContext.2d /Type: CanvasContext /Status: SUCCESS /Value: 2d context created");
+	} else {
+		store_data("/Name: canvas.getContext.2d /Type: CanvasContext /Status: FAILED /Value: Context not available");
+	}
+} catch(e) {
+	store_data("/Name: canvas.getContext.2d /Type: CanvasContext /Status: FAILED /Error: " + String(e));
+}
+try {
+	var gl = canvas_webgl ? (canvas_webgl.getContext("webgl") || canvas_webgl.getContext("experimental-webgl")) : null;
+	if (gl) {
+		store_data("/Name: canvas.getContext.webgl /Type: CanvasContext /Status: SUCCESS /Value: WebGL context created");
+	} else {
+		store_data("/Name: canvas.getContext.webgl /Type: CanvasContext /Status: FAILED /Value: WebGL context not available");
+	}
+} catch(e) {
+	store_data("/Name: canvas.getContext.webgl /Type: CanvasContext /Status: FAILED /Error: " + String(e));
+}
+try {
+	var gl2 = canvas_webgl2 ? canvas_webgl2.getContext("webgl2") : null;
+	if (gl2) {
+		store_data("/Name: canvas.getContext.webgl2 /Type: CanvasContext /Status: SUCCESS /Value: WebGL2 context created");
+	} else {
+		store_data("/Name: canvas.getContext.webgl2 /Type: CanvasContext /Status: FAILED /Value: WebGL2 context not available");
+	}
+} catch(e) {
+	store_data("/Name: canvas.getContext.webgl2 /Type: CanvasContext /Status: FAILED /Error: " + String(e));
+}
+try {
+	var ex_gl = canvas_experimental ? canvas_experimental.getContext("experimental-webgl") : null;
+	if (ex_gl) {
+		store_data("/Name: canvas.getContext.experimental-webgl /Type: CanvasContext /Status: SUCCESS /Value: Experimental WebGL context created");
+	} else {
+		store_data("/Name: canvas.getContext.experimental-webgl /Type: CanvasContext /Status: FAILED /Value: Experimental WebGL context not available");
+	}
+} catch(e) {
+	store_data("/Name: canvas.getContext.experimental-webgl /Type: CanvasContext /Status: FAILED /Error: " + String(e));
+}
+try {
+	var bmr = canvas_bitmap ? canvas_bitmap.getContext("bitmaprenderer") : null;
+	if (bmr) {
+		store_data("/Name: canvas.getContext.bitmaprenderer /Type: CanvasContext /Status: SUCCESS /Value: BitmapRenderer context created");
+	} else {
+		store_data("/Name: canvas.getContext.bitmaprenderer /Type: CanvasContext /Status: FAILED /Value: BitmapRenderer context not available");
+	}
+} catch(e) {
+	store_data("/Name: canvas.getContext.bitmaprenderer /Type: CanvasContext /Status: FAILED /Error: " + String(e));
+}
+
+// Embedded content
+allElements.push(createElementSafely('embed', container, {src: 'https://www.w3schools.com/tags/helloworld.swf', width: '400', height: '400', type: 'application/x-shockwave-flash'}));
+allElements.push(createElementSafely('iframe', container, {src: 'https://example.com', width: '400', height: '300', sandbox: 'allow-same-origin'}));
+allElements.push(createElementSafely('object', container, {data: 'https://www.w3schools.com/tags/helloworld.swf', width: '400', height: '400', type: 'application/x-shockwave-flash'}));
+allElements.push(createElementSafely('param', container, {name: 'quality', value: 'high'}));
+
+// Forms
+var form_elem = createElementSafely('form', container, {action: 'https://example.com', method: 'post'});
+allElements.push(form_elem);
+allElements.push(createElementSafely('button', form_elem, {type: 'button'}));
+allElements.push(createElementSafely('datalist', form_elem, {id: 'testlist'}));
+allElements.push(createElementSafely('fieldset', form_elem));
+allElements.push(createElementSafely('label', form_elem, {for: 'testinput'}));
+allElements.push(createElementSafely('legend', form_elem));
+allElements.push(createElementSafely('meter', form_elem, {value: '50', min: '0', max: '100'}));
+allElements.push(createElementSafely('optgroup', form_elem, {label: 'Group 1'}));
+allElements.push(createElementSafely('option', form_elem, {value: 'option1'}));
+allElements.push(createElementSafely('output', form_elem, {for: 'testinput', name: 'result'}));
+allElements.push(createElementSafely('progress', form_elem, {value: '50', max: '100'}));
+var select_elem = createElementSafely('select', form_elem, {id: 'testselect'});
+allElements.push(select_elem);
+allElements.push(createElementSafely('textarea', form_elem, {rows: '4', cols: '50'}));
+
+// Input types
+var inputTypes = ['text', 'password', 'email', 'tel', 'url', 'search', 'date', 'time', 'datetime-local', 'month', 'week', 'number', 'range', 'color', 'checkbox', 'radio', 'file', 'submit', 'image', 'reset', 'button', 'hidden'];
+for (var i = 0; i < inputTypes.length; i++) {
+	var inputAttrs = {type: inputTypes[i], id: 'input_' + inputTypes[i]};
+	if (inputTypes[i] === 'range') {
+		inputAttrs.min = '0';
+		inputAttrs.max = '100';
+		inputAttrs.value = '50';
+	} else if (inputTypes[i] === 'number') {
+		inputAttrs.min = '0';
+		inputAttrs.max = '100';
+		inputAttrs.value = '10';
+	} else if (inputTypes[i] === 'color') {
+		inputAttrs.value = '#ff0000';
+	} else if (inputTypes[i] === 'date') {
+		inputAttrs.value = '2024-01-01';
+	} else if (inputTypes[i] === 'time') {
+		inputAttrs.value = '12:00';
+	} else if (inputTypes[i] === 'image') {
+		inputAttrs.src = 'https://picsum.photos/100/100';
+		inputAttrs.alt = 'Submit';
+	}
+	allElements.push(createElementSafely('input', form_elem, inputAttrs));
+}
+
+// Interactive elements
+allElements.push(createElementSafely('details', container));
+allElements.push(createElementSafely('dialog', container, {open: false}));
+allElements.push(createElementSafely('menu', container, {type: 'context'}));
+allElements.push(createElementSafely('summary', container));
+
+// Web Components
+allElements.push(createElementSafely('slot', container, {name: 'testslot'}));
+
+// Table elements
+var table_elem = createElementSafely('table', container);
+allElements.push(table_elem);
+allElements.push(createElementSafely('caption', table_elem));
+allElements.push(createElementSafely('colgroup', table_elem));
+allElements.push(createElementSafely('col', table_elem, {span: '2'}));
+allElements.push(createElementSafely('tbody', table_elem));
+allElements.push(createElementSafely('td', table_elem));
+allElements.push(createElementSafely('tfoot', table_elem));
+allElements.push(createElementSafely('th', table_elem));
+allElements.push(createElementSafely('thead', table_elem));
+allElements.push(createElementSafely('tr', table_elem));
+
+// Deprecated but still supported elements
+try {
+	allElements.push(createElementSafely('marquee', container));
+} catch(e) {}
+try {
+	allElements.push(createElementSafely('center', container));
+} catch(e) {}
+try {
+	allElements.push(createElementSafely('font', container, {color: 'red', size: '3'}));
+} catch(e) {}
+
+// Additional elements
+allElements.push(createElementSafely('script', container, {type: 'text/javascript'}));
+allElements.push(createElementSafely('noscript', container));
+allElements.push(createElementSafely('del', container, {cite: 'https://example.com', datetime: '2024-01-01'}));
+allElements.push(createElementSafely('ins', container, {cite: 'https://example.com', datetime: '2024-01-01'}));
+
+</script>
+</body>
+</html>
+

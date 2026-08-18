@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(docker manifest:*)",
+      "Bash(docker network:*)",
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"netsh winhttp show proxy; [System.Net.WebRequest]::DefaultWebProxy.GetProxy\\('https://example.com'\\)\" 2>&1)",
+      "Bash(powershell -Command \"Test-NetConnection -ComputerName 8.8.8.8 -Port 53; Test-NetConnection -ComputerName 93.184.216.34 -Port 443\" 2>&1)",
+      "Bash(powershell -Command \"Resolve-DnsName example.com; \\(Invoke-WebRequest -Uri 'https://example.com' -UseBasicParsing -TimeoutSec 10\\).StatusCode\" 2>&1)",
+      "Bash(powershell -Command \"Get-NetRoute -DestinationPrefix '0.0.0.0/0' | Sort-Object RouteMetric | Select-Object -First 5 InterfaceAlias, NextHop, RouteMetric, ifIndex\" 2>&1)",
+      "Bash(powershell -Command \"Get-NetAdapter Wi-Fi | Select-Object Status, LinkSpeed; Get-DnsClientServerAddress -InterfaceAlias Wi-Fi\" 2>&1)",
+      "Bash(powershell -Command \"Get-DnsClientServerAddress | Select-Object InterfaceAlias, ServerAddresses\")",
+      "Bash(powershell -Command \"Resolve-DnsName -Name example.com -TcpOnly -Server 8.8.8.8\" 2>&1)",
+      "Bash(powershell -Command \"Test-NetConnection -ComputerName 104.20.23.154 -Port 443\" 2>&1)",
+      "Bash(powershell -Command \"Get-NetFirewallRule | Where-Object {$_.Direction -eq 'Outbound' -and $_.Action -eq 'Block' -and $_.Enabled -eq 'True'} | Select-Object DisplayName, Action, Direction, Enabled | Format-Table -AutoSize\" 2>&1)",
+      "Bash(powershell -Command \"Get-NetFirewallRule -Direction Outbound -Action Block -Enabled True | Select-Object DisplayName | Format-Table -AutoSize\" 2>&1)",
+      "Bash(powershell -Command \"Get-DnsClientDohServerAddress\" 2>&1)",
+      "Bash(powershell -Command \"Set-DnsClientServerAddress -InterfaceAlias Wi-Fi -ServerAddresses 8.8.8.8, 8.8.4.4; Set-DnsClientDohServerAddress -ServerAddress 8.8.8.8 -DohTemplate https://dns.google/dns-query -AllowFallbackToUdp $false -AutoUpgrade $true; Set-DnsClientDohServerAddress -ServerAddress 8.8.4.4 -DohTemplate https://dns.google/dns-query -AllowFallbackToUdp $false -AutoUpgrade $true\" 2>&1)",
+      "Bash(powershell -Command \"Resolve-DnsName example.com\" 2>&1)",
+      "Bash(cmd /c build_and_run.bat)",
+      "Bash(docker stop:*)",
+      "Bash(docker system:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker volume:*)",
+      "Bash(docker image:*)",
+      "Bash(docker wait:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker images:*)",
+      "Bash(node run_debug.js)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+browser-cache/
+.claude/
+*.bat
+get_title.js
