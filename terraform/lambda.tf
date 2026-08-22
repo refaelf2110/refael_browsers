@@ -129,6 +129,17 @@ data "aws_iam_policy_document" "refael_results_api_policy" {
       "${aws_s3_bucket.refael_results.arn}/*",
     ]
   }
+
+  statement {
+    sid    = "BrowsersCacheList"
+    effect = "Allow"
+    actions = [
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.refael_browsers_cache.arn,
+    ]
+  }
 }
 
 resource "aws_iam_policy" "refael_results_api_policy" {
@@ -222,9 +233,10 @@ resource "aws_lambda_function" "refael_results_api" {
 
   environment {
     variables = {
-      ATHENA_WORKGROUP      = aws_athena_workgroup.refael.name
-      ATHENA_DATABASE       = aws_glue_catalog_database.refael_browser_matrix.name
-      ATHENA_RESULTS_BUCKET = "s3://${aws_s3_bucket.refael_results.id}/${var.athena_results_prefix}"
+      ATHENA_WORKGROUP       = aws_athena_workgroup.refael.name
+      ATHENA_DATABASE        = aws_glue_catalog_database.refael_browser_matrix.name
+      ATHENA_RESULTS_BUCKET  = "s3://${aws_s3_bucket.refael_results.id}/${var.athena_results_prefix}"
+      BROWSERS_CACHE_BUCKET  = aws_s3_bucket.refael_browsers_cache.id
     }
   }
 

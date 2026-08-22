@@ -7,10 +7,14 @@ const {
   GetQueryResultsCommand,
 } = require('@aws-sdk/client-athena');
 
+const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+
 const athena   = new AthenaClient({});
 const DATABASE = process.env.ATHENA_DATABASE;
 const WORKGROUP = process.env.ATHENA_WORKGROUP;
 const OUTPUT   = process.env.ATHENA_RESULTS_BUCKET;
+
+const s3 = new S3Client({});
 
 // ── Athena helpers ────────────────────────────────────────────────────────────
 
@@ -175,6 +179,79 @@ async function getExtractorFunctions(queryParams) {
   };
 }
 
+async function getBrowsersAvailable() {
+  const BROWSERS_BUCKET = process.env.BROWSERS_CACHE_BUCKET;
+  if (!BROWSERS_BUCKET) throw new Error('BROWSERS_CACHE_BUCKET env var is not set');
+
+  // List both prefixes in parallel
+  async function listPrefix(prefix) {
+    const keys = [];
+    let token;
+    do {
+      const resp = await s3.send(new ListObjectsV2Command({
+        Bucket:            BROWSERS_BUCKET,
+        Prefix:            prefix,
+        ContinuationToken: token,
+      }));
+      for (const obj of (resp.Contents || [])) {
+        if (!obj.Key.endsWith('/') && !obj.Key.endsWith('.keep')) {
+          keys.push(obj.Key.slice(prefix.length)); // relative to prefix
+        }
+      }
+      token = resp.IsTruncated ? resp.NextContinuationToken : undefined;
+    } while (token);
+    return keys;
+  }
+
+  const [windowsKeys, linuxKeys] = await Promise.all([
+    listPrefix('windows/'),
+    listPrefix('linux/'),
+  ]);
+
+  // Numeric semver-style descending comparator
+  function compareVersionsDesc(a, b) {
+    const ap = a.split('.').map(n => parseInt(n, 10) || 0);
+    const bp = b.split('.').map(n => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(ap.length, bp.length); i++) {
+      const d = (bp[i] || 0) - (ap[i] || 0); // descending
+      if (d !== 0) return d;
+    }
+    return 0;
+  }
+
+  function parseKeys(keys) {
+    const chromeSet  = new Set();
+    const firefoxSet = new Set();
+
+    for (const rel of keys) {
+      // rel is relative to the OS prefix, e.g. "chrome/win64-131.0.6778.87/chrome-win64/chrome.exe"
+      const parts = rel.split('/');
+      const kind  = parts[0];
+      const folder = parts[1] || '';
+
+      if (kind === 'chrome' || kind === 'linux/chrome') {
+        // folder: win64-131.0.6778.87
+        const m = folder.match(/^win64-(.+)$/);
+        if (m) chromeSet.add(m[1]);
+      } else if (kind === 'chromedriver') {
+        // skip — implied by chrome
+      } else if (kind === 'firefox') {
+        // folder: major version number only (numeric)
+        if (/^\d+$/.test(folder)) firefoxSet.add(folder);
+      }
+    }
+
+    const chrome  = [...chromeSet].sort(compareVersionsDesc);
+    const firefox = [...firefoxSet].sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+    return { chrome, firefox };
+  }
+
+  const windows = parseKeys(windowsKeys);
+  const linux   = parseKeys(linuxKeys);
+
+  return { statusCode: 200, body: { windows, linux } };
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 exports.handler = async (event) => {
@@ -195,6 +272,7 @@ exports.handler = async (event) => {
     else if (method === 'GET' && path === '/extractor/browsers')             result = await getExtractorBrowsers();
     else if (method === 'GET' && path === '/extractor/diff')                 result = await getExtractorDiff(query);
     else if (method === 'GET' && path === '/extractor/functions')            result = await getExtractorFunctions(query);
+    else if (method === 'GET' && path === '/browsers/available')             result = await getBrowsersAvailable();
     else result = { statusCode: 404, body: { error: 'Not found' } };
 
     return {

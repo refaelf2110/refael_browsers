@@ -27,7 +27,7 @@ exports.handler = async (event) => {
     return response(400, { error: 'Invalid JSON body' });
   }
 
-  const { platform, run_mode } = body;
+  const { platform, run_mode, browser_filter, version_list } = body;
 
   if (!platform || !VALID_PLATFORMS.includes(platform)) {
     return response(400, {
@@ -49,6 +49,9 @@ exports.handler = async (event) => {
     run_mode,
     submittedAt: new Date().toISOString(),
   };
+
+  if (browser_filter !== undefined) message.browser_filter = browser_filter;
+  if (version_list   !== undefined) message.version_list   = version_list;
 
   await sqs.send(new SendMessageCommand({
     QueueUrl:    QUEUE_URL,
