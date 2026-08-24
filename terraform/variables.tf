@@ -79,25 +79,25 @@ variable "lambda_runtime" {
 variable "ecs_linux_cpu" {
   description = "CPU units for Linux ECS task"
   type        = number
-  default     = 2048
+  default     = 8192
 }
 
 variable "ecs_linux_memory" {
   description = "Memory (MiB) for Linux ECS task"
   type        = number
-  default     = 4096
+  default     = 16384
 }
 
 variable "ecs_windows_cpu" {
   description = "CPU units for Windows ECS task"
   type        = number
-  default     = 2048
+  default     = 8192
 }
 
 variable "ecs_windows_memory" {
   description = "Memory (MiB) for Windows ECS task"
   type        = number
-  default     = 4096
+  default     = 16384
 }
 
 variable "athena_results_prefix" {

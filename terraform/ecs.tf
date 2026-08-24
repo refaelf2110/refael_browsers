@@ -130,6 +130,10 @@ resource "aws_ecs_task_definition" "refael_windows" {
     cpu_architecture        = "X86_64"
   }
 
+  ephemeral_storage {
+    size_in_gib = 100
+  }
+
   container_definitions = jsonencode([
     {
       name  = "refael-windows"

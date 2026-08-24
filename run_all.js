@@ -1044,6 +1044,7 @@ async function run() {
   const elapsed = formatElapsed(Date.now() - startMs);
   console.log(`\nTotal time: ${elapsed}`);
   generateResultsHTML(elapsed, 'Full');
+  process.exit(0);
 }
 
 run().catch(err => { console.error(err); process.exit(1); });
