@@ -46,9 +46,13 @@ case "${RUN_MODE:-}" in
         echo "--- Interceptions run (JS function-call capture) ---"
         node /app/interceptions_runner.js
         ;;
+    full)
+        echo "--- Detection run (automation platform detection test) ---"
+        node /app/run_all.js
+        ;;
     *)
         echo "Error: RUN_MODE '${RUN_MODE:-<unset>}' is not supported on Linux."
-        echo "Supported modes: extractor, interceptions, extractor-mini, download"
+        echo "Supported modes: full, extractor, interceptions, extractor-mini, download"
         exit 1
         ;;
 esac

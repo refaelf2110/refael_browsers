@@ -51,7 +51,7 @@ exports.handler = async (event) => {
       continue;
     }
 
-    const { jobId, platform, run_mode, browser_filter, version_list, frameworks } = message;
+    const { jobId, platform, run_mode, browser_filter, version_list, frameworks, headless } = message;
     console.log(`Processing job ${jobId}: platform=${platform} run_mode=${run_mode}`);
 
     const taskDefinition = platform === 'windows' ? WINDOWS_TASK_DEF : LINUX_TASK_DEF;
@@ -73,6 +73,9 @@ exports.handler = async (event) => {
 
     if (frameworks !== undefined) {
       browserEnv.push({ name: 'FRAMEWORKS', value: frameworks });
+    }
+    if (headless !== undefined) {
+      browserEnv.push({ name: 'HEADLESS', value: String(headless) });
     }
 
     const result = await ecs.send(new RunTaskCommand({

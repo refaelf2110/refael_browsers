@@ -234,9 +234,15 @@ function BrowserSection({ title, versions, selected, onSelect, onToggle }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+const HEADLESS_OPTIONS = [
+  { id: 'headless', label: 'Headless' },
+  { id: 'headfull', label: 'Headfull' },
+];
+
 export default function Browsers() {
   const [runMode,       setRunMode]       = useState('full');
   const [selectedOS,    setSelectedOS]    = useState(new Set());
+  const [headlessSel,   setHeadlessSel]   = useState(new Set(['headless', 'headfull']));
   const [chromeSel,     setChromeSel]     = useState(new Set());
   const [firefoxSel,    setFirefoxSel]    = useState(new Set());
   const [available,     setAvailable]     = useState(null);  // { windows, linux } or null
@@ -331,6 +337,14 @@ export default function Browsers() {
     setResults([]);
   }
 
+  function toggleHeadless(id) {
+    setHeadlessSel(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   function toggleChrome(v) {
     setChromeSel(prev => {
       const next = new Set(prev);
@@ -348,7 +362,7 @@ export default function Browsers() {
   }
 
   const hasVersions = chromeSel.size > 0 || firefoxSel.size > 0;
-  const canRun = selectedOS.size > 0 && hasVersions && platformSel.size > 0 && !submitting;
+  const canRun = selectedOS.size > 0 && headlessSel.size > 0 && hasVersions && platformSel.size > 0 && !submitting;
 
   async function handleSubmit() {
     if (!canRun) return;
@@ -365,14 +379,21 @@ export default function Browsers() {
     if (chromeSel.size > 0)  version_list.chrome  = [...chromeSel];
     if (firefoxSel.size > 0) version_list.firefox = [...firefoxSel];
 
+    // headless: send 'true' or 'false' only when exactly one is selected; omit when both selected
+    const headlessParam = headlessSel.size === 1
+      ? (headlessSel.has('headless') ? 'true' : 'false')
+      : undefined;
+
     const jobs = [...selectedOS].map(os => ({ os, platform: os }));
 
     const settled = await Promise.allSettled(
       jobs.map(async ({ os }) => {
+        const body = { platform: os, run_mode: runMode, browser_filter, version_list, frameworks: [...platformSel].join(',') };
+        if (headlessParam !== undefined) body.headless = headlessParam;
         const res  = await fetch(`${API_URL}/jobs`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ platform: os, run_mode: runMode, browser_filter, version_list, frameworks: [...platformSel].join(',') }),
+          body:    JSON.stringify(body),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -436,9 +457,25 @@ export default function Browsers() {
         </div>
       </div>
 
-      {/* 3. Automation Platforms */}
+      {/* 3. Headless / Headfull */}
       <div style={s.section}>
-        <div style={s.sectionTitle}>3. Automation Platforms</div>
+        <div style={s.sectionTitle}>3. Mode</div>
+        <div style={s.row}>
+          {HEADLESS_OPTIONS.map(opt => {
+            const checked = headlessSel.has(opt.id);
+            return (
+              <div key={opt.id} style={s.osCard(checked, '#e3b341')} onClick={() => toggleHeadless(opt.id)}>
+                <CheckboxTick checked={checked} color='#e3b341' />
+                <span style={s.osLabel(checked, '#e3b341')}>{opt.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Automation Platforms */}
+      <div style={s.section}>
+        <div style={s.sectionTitle}>4. Automation Platforms</div>
         <div style={{ marginBottom: '10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <button style={s.quickBtn} onClick={() => setPlatformSel(new Set(availablePlatforms.map(p => p.id)))}>Select All</button>
           <button style={s.quickBtn} onClick={() => setPlatformSel(new Set())}>None</button>
@@ -459,9 +496,9 @@ export default function Browsers() {
         </div>
       </div>
 
-      {/* 4. Browser Versions */}
+      {/* 5. Browser Versions */}
       <div style={s.section}>
-        <div style={s.sectionTitle}>4. Browser Versions</div>
+        <div style={s.sectionTitle}>5. Browser Versions</div>
 
         {loadingAvail && (
           <div style={s.loadingBox}>Loading available versions…</div>
@@ -491,9 +528,9 @@ export default function Browsers() {
         )}
       </div>
 
-      {/* 5. Submit */}
+      {/* 6. Submit */}
       <div style={s.section}>
-        <div style={s.sectionTitle}>5. Submit</div>
+        <div style={s.sectionTitle}>6. Submit</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <button style={s.btn(!canRun)} onClick={handleSubmit} disabled={!canRun}>
             {submitLabel}
@@ -501,10 +538,13 @@ export default function Browsers() {
           {selectedOS.size === 0 && (
             <span style={s.hint}>Select at least one OS</span>
           )}
-          {selectedOS.size > 0 && !hasVersions && (
+          {selectedOS.size > 0 && headlessSel.size === 0 && (
+            <span style={s.hint}>Select at least one mode (headless / headfull)</span>
+          )}
+          {selectedOS.size > 0 && headlessSel.size > 0 && !hasVersions && (
             <span style={s.hint}>Select at least one browser version</span>
           )}
-          {selectedOS.size > 0 && hasVersions && platformSel.size === 0 && (
+          {selectedOS.size > 0 && headlessSel.size > 0 && hasVersions && platformSel.size === 0 && (
             <span style={s.hint}>Select at least one automation platform</span>
           )}
         </div>

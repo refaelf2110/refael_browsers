@@ -4,10 +4,12 @@
 process.on('unhandledRejection', reason => { console.error('[unhandledRejection swallowed]', (reason && reason.message) || reason); });
 process.on('uncaughtException',  err    => { console.error('[uncaughtException swallowed]', (err && err.message) || err); });
 
+const isWin = process.platform === 'win32';
+
 // ── Exit diagnostics — detect premature process.exit() calls ─────────────────
 {
   const _fsSync = require('fs');
-  const _dbgLog = 'C:\\browsers\\debug.log';
+  const _dbgLog = isWin ? 'C:\\browsers\\debug.log' : '/tmp/debug.log';
   const _origExit = process.exit.bind(process);
   process.exit = function diagExit(code) {
     try {
@@ -45,12 +47,13 @@ const path = require('path');
 const { generateHTML } = require('./generate_html');
 const { saveRun }      = require('./db');
 
-const CACHE_DIR     = 'C:\\browsers';
+const CACHE_DIR     = isWin ? 'C:\\browsers' : '/browsers';
 const FF_DIR        = path.join(CACHE_DIR, 'firefox');
 function geckoExeFor(ffMajor) {
+  const exe = isWin ? 'geckodriver.exe' : 'geckodriver';
   return Number(ffMajor) < 91
-    ? path.join(CACHE_DIR, 'geckodriver', 'v0.30.0', 'geckodriver.exe')
-    : path.join(CACHE_DIR, 'geckodriver', 'latest', 'geckodriver.exe');
+    ? path.join(CACHE_DIR, 'geckodriver', 'v0.30.0', exe)
+    : path.join(CACHE_DIR, 'geckodriver', 'latest', exe);
 }
 const EDGE_MANIFEST = path.join(CACHE_DIR, 'edgedriver', 'manifest.json');
 
@@ -64,7 +67,7 @@ const CDP_HEADER  = { 'x-refael': '7e8afcbdd3' };
 // Prefer the container-built XPI; fall back to a local copy; auto-build from source
 // if running on the host (outside the container) and no prebuilt file exists.
 function resolveHeaderInjectorXpi() {
-  const containerPath = 'C:\\app\\header-injector.xpi';
+  const containerPath = isWin ? 'C:\\app\\header-injector.xpi' : '/app/header-injector.xpi';
   const localPath = path.join(__dirname, 'header-injector.xpi');
   if (fs.existsSync(containerPath)) return containerPath;
   if (fs.existsSync(localPath)) return localPath;
@@ -73,7 +76,11 @@ function resolveHeaderInjectorXpi() {
   try {
     const { execSync } = require('child_process');
     const tmp = localPath.replace('.xpi', '.zip');
-    execSync(`powershell -Command "Compress-Archive -Path '${srcDir}\\*' -DestinationPath '${tmp}' -Force"`, { stdio: 'ignore' });
+    if (isWin) {
+      execSync(`powershell -Command "Compress-Archive -Path '${srcDir}\\*' -DestinationPath '${tmp}' -Force"`, { stdio: 'ignore' });
+    } else {
+      execSync(`cd '${srcDir}' && zip -r '${tmp}' .`, { shell: '/bin/bash', stdio: 'ignore' });
+    }
     if (fs.existsSync(tmp)) fs.renameSync(tmp, localPath);
     if (fs.existsSync(localPath)) console.log('[init] Built header-injector.xpi from source');
   } catch (_) {}
@@ -82,6 +89,7 @@ function resolveHeaderInjectorXpi() {
 const FF_EXT_XPI = resolveHeaderInjectorXpi();
 process.env.SE_CACHE_PATH = path.join(CACHE_DIR, 'selenium-manager');
 const RESULTS_FILE = path.join(CACHE_DIR, 'results_full.html');
+const TEMP_DIR     = isWin ? 'C:\\Windows\\Temp' : '/tmp';
 const TEST_URL     = 'https://obs.4.dev.cheqzone.com/tests/reasons-debug.html';
 // URL with embedded credentials — Chrome/Edge cache auth per-origin so subrequests to
 // obs.4.dev.cheqzone.com are authenticated without leaking Authorization to CDN domains.
@@ -128,18 +136,24 @@ function allocatePort() { return _nextPort++; }
 // scan if the library crashes on old-format entries in the cache directory.
 function listCacheEntries(cacheDir) {
   const results = [];
+  const platRe  = isWin ? /^win64-(.+)$/ : /^linux(?:64)?-(.+)$/;
   const scan = (browser, dir, execRelPath) => {
     const d = path.join(cacheDir, dir);
     if (!fs.existsSync(d)) return;
     for (const entry of fs.readdirSync(d)) {
-      const m = entry.match(/^win64-(.+)$/);
+      const m = entry.match(platRe);
       if (!m) continue;
-      results.push({ browser, buildId: m[1], executablePath: path.join(d, entry, ...execRelPath), platform: 'win64' });
+      results.push({ browser, buildId: m[1], executablePath: path.join(d, entry, ...execRelPath), platform: isWin ? 'win64' : 'linux' });
     }
   };
-  scan(Browser.CHROME,       'chrome',       ['chrome-win64', 'chrome.exe']);
-  scan(Browser.FIREFOX,      'firefox',      ['core', 'firefox.exe']);
-  scan(Browser.CHROMEDRIVER, 'chromedriver', ['chromedriver-win64', 'chromedriver.exe']);
+  if (isWin) {
+    scan(Browser.CHROME,       'chrome',       ['chrome-win64',        'chrome.exe']);
+    scan(Browser.FIREFOX,      'firefox',      ['core',                'firefox.exe']);
+    scan(Browser.CHROMEDRIVER, 'chromedriver', ['chromedriver-win64',  'chromedriver.exe']);
+  } else {
+    scan(Browser.CHROME,       'chrome',       ['chrome-linux64',      'chrome']);
+    scan(Browser.CHROMEDRIVER, 'chromedriver', ['chromedriver-linux64','chromedriver']);
+  }
   return results;
 }
 
@@ -758,7 +772,7 @@ async function runAllCypressTests(chromes) {
 }
 
 async function runCypressChromeTest(major, chromePath) {
-  const outFile = path.join('C:\\Windows\\Temp', `cy-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
+  const outFile = path.join(TEMP_DIR, `cy-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
   let positiveReasons = [], allReasons = [], error = null;
   try {
     const cypress = require('cypress');
@@ -815,7 +829,7 @@ async function runAllTestCafeTests(chromes) {
 
 async function runTestCafeChromeTest(major, chromePath, headless) {
   const mode    = headless ? 'headless' : 'headfull';
-  const outFile = path.join('C:\\Windows\\Temp', `tc-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
+  const outFile = path.join(TEMP_DIR, `tc-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
   let testcafe, positiveReasons = [], allReasons = [], error = null;
   try {
     const createTestCafe = require('testcafe');
@@ -959,7 +973,7 @@ async function buildTaskList() {
   // ── Selenium Firefox — all versions ───────────────────────────────────────
   if (fs.existsSync(FF_DIR)) {
     for (const major of fs.readdirSync(FF_DIR).sort((a, b) => Number(a) - Number(b))) {
-      const exe = path.join(FF_DIR, major, 'firefox.exe');
+      const exe = path.join(FF_DIR, major, isWin ? 'firefox.exe' : 'firefox');
       if (!fs.existsSync(exe)) continue;
       const geckoExe = geckoExeFor(major);
       if (!fs.existsSync(geckoExe)) continue;
@@ -982,13 +996,14 @@ async function buildTaskList() {
   // in this container (same binaries also fail under Puppeteer). Use the NSIS-installed
   // versions from FF_DIR, which Selenium confirms can create geckodriver sessions.
   if (fs.existsSync(FF_DIR)) {
+    const ffExeName = isWin ? 'firefox.exe' : 'firefox';
     const wdioFirefoxFiltered = fs.readdirSync(FF_DIR)
       .sort((a, b) => Number(a) - Number(b))
       .filter(major => {
-        const exe = path.join(FF_DIR, major, 'firefox.exe');
+        const exe = path.join(FF_DIR, major, ffExeName);
         return fs.existsSync(exe) && want('webdriverio', 'firefox', major, null);
       })
-      .map(major => ({ major, executablePath: path.join(FF_DIR, major, 'firefox.exe') }));
+      .map(major => ({ major, executablePath: path.join(FF_DIR, major, ffExeName) }));
     if (wdioFirefoxFiltered.length > 0)
       tasks.push(() => runAllWebdriverIOFirefoxTests(wdioFirefoxFiltered));
   }

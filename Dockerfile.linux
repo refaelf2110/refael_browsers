@@ -47,12 +47,15 @@ RUN npx playwright install --with-deps chromium firefox
 # ── Application scripts ──────────────────────────────────────────────────────
 COPY sync_browsers_from_s3_linux.js .
 COPY run_extractor.js .
+COPY run_all.js .
 COPY window_elements_extractor.html .
 COPY generate_html.js .
 COPY db.js .
 COPY test_page.html .
 COPY interceptions_runner.js .
 COPY interceptor_page.html .
+COPY cypress-detection.cy.js .
+COPY testcafe-detection.js .
 COPY entrypoint_linux.sh .
 
 RUN chmod +x /app/entrypoint_linux.sh
