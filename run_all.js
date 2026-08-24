@@ -908,11 +908,13 @@ async function buildTaskList() {
           { executablePath: b.executablePath, args: extraArgs }, headless));
   }
 
-  for (const [label, channel] of [['edge', 'msedge'], ['edge-beta', 'msedge-beta'], ['edge-dev', 'msedge-dev']]) {
-    for (const headless of [true, false])
-      if (want('playwright', label, null, headless))
-        tasks.push(() => runPlaywrightTest(label, null, chromium,
-          { channel, args: ['--no-sandbox', '--no-first-run', '--disable-default-apps', '--no-default-browser-check'] }, headless));
+  if (isWin) {
+    for (const [label, channel] of [['edge', 'msedge'], ['edge-beta', 'msedge-beta'], ['edge-dev', 'msedge-dev']]) {
+      for (const headless of [true, false])
+        if (want('playwright', label, null, headless))
+          tasks.push(() => runPlaywrightTest(label, null, chromium,
+            { channel, args: ['--no-sandbox', '--no-first-run', '--disable-default-apps', '--no-default-browser-check'] }, headless));
+    }
   }
 
   // ── Puppeteer — sampled Chrome versions ────────────────────────────────────

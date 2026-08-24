@@ -29,6 +29,10 @@ else
     echo "--- Skipping S3 browser sync (SKIP_DOWNLOAD=1) ---"
 fi
 
+# Make all downloaded binaries executable
+find /browsers -type f \( -name "chrome" -o -name "chromedriver" -o -name "geckodriver" -o -name "firefox" \) -exec chmod +x {} +
+echo "--- Browser binaries marked executable ---"
+
 # ── Run job ───────────────────────────────────────────────────────────────────
 case "${RUN_MODE:-}" in
     download)
