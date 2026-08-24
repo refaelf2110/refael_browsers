@@ -3,10 +3,9 @@ import React, { useState, useEffect } from 'react';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 const RUN_MODES = [
-  { id: 'mini',          label: 'Detection (Mini)',  description: 'Quick detection test — sampled browser versions, all frameworks' },
-  { id: 'full',          label: 'Detection (Full)',  description: 'Full detection test — all browser versions, all frameworks' },
-  { id: 'extractor',     label: 'Extractor',         description: 'Collect window.* properties for all selected browsers' },
-  { id: 'interceptions', label: 'Interceptions',     description: 'Capture all JS function calls during detection' },
+  { id: 'full',          label: 'Detection',    description: 'Run detection test against selected browsers and frameworks' },
+  { id: 'extractor',     label: 'Extractor',    description: 'Collect window.* properties for all selected browsers' },
+  { id: 'interceptions', label: 'Interceptions', description: 'Capture all JS function calls during detection' },
 ];
 
 const OS_LIST = [
@@ -16,11 +15,11 @@ const OS_LIST = [
 
 // Taiko excluded from interceptions (no interception support)
 const ALL_PLATFORMS = [
-  { id: 'playwright',  label: 'Playwright',  modes: ['mini', 'full', 'extractor', 'interceptions'] },
-  { id: 'puppeteer',   label: 'Puppeteer',   modes: ['mini', 'full', 'extractor', 'interceptions'] },
-  { id: 'selenium',    label: 'Selenium',    modes: ['mini', 'full', 'extractor', 'interceptions'] },
-  { id: 'webdriverio', label: 'WebdriverIO', modes: ['mini', 'full', 'extractor', 'interceptions'] },
-  { id: 'taiko',       label: 'Taiko',       modes: ['mini', 'full', 'extractor'] },
+  { id: 'playwright',  label: 'Playwright',  modes: ['full', 'extractor', 'interceptions'] },
+  { id: 'puppeteer',   label: 'Puppeteer',   modes: ['full', 'extractor', 'interceptions'] },
+  { id: 'selenium',    label: 'Selenium',    modes: ['full', 'extractor', 'interceptions'] },
+  { id: 'webdriverio', label: 'WebdriverIO', modes: ['full', 'extractor', 'interceptions'] },
+  { id: 'taiko',       label: 'Taiko',       modes: ['full', 'extractor'] },
 ];
 
 const s = {
@@ -236,7 +235,7 @@ function BrowserSection({ title, versions, selected, onSelect, onToggle }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Browsers() {
-  const [runMode,       setRunMode]       = useState('mini');
+  const [runMode,       setRunMode]       = useState('full');
   const [selectedOS,    setSelectedOS]    = useState(new Set());
   const [chromeSel,     setChromeSel]     = useState(new Set());
   const [firefoxSel,    setFirefoxSel]    = useState(new Set());
