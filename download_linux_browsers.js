@@ -25,9 +25,7 @@ const { install, Browser, BrowserPlatform } = require('@puppeteer/browsers');
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
-const { pipeline } = require('stream/promises');
-const { createGunzip } = require('zlib');
-const { Extract } = require('tar');  // tar is a dep of npm, usually available
+const { execFileSync } = require('child_process');
 
 const CACHE_DIR            = path.join(__dirname, 'linux-browser-cache');
 const MAX_CHROME_VERSIONS  = 5;
@@ -142,14 +140,8 @@ async function downloadGeckodriver() {
   const tmpTar = destFile + '.tar.gz';
   fs.writeFileSync(tmpTar, buf);
 
-  await new Promise((resolve, reject) => {
-    fs.createReadStream(tmpTar)
-      .pipe(createGunzip())
-      .pipe(Extract({ cwd: destDir }))
-      .on('finish', resolve)
-      .on('error', reject);
-  });
-
+  // tar.exe is built into Windows 10+
+  execFileSync('tar', ['-xzf', tmpTar, '-C', destDir], { stdio: 'inherit' });
   fs.unlinkSync(tmpTar);
   // Make executable
   fs.chmodSync(destFile, 0o755);
