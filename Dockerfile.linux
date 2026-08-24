@@ -1,0 +1,68 @@
+# escape=`
+# Ubuntu 24.04 with full XFCE desktop + Xvfb virtual display.
+# Browsers run in headed mode against the virtual framebuffer,
+# making them behave as close as possible to a real Linux desktop machine.
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:99
+
+# ── System packages ───────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y \
+    # Build tools (required for native npm modules, e.g. better-sqlite3) \
+    build-essential \
+    python3 \
+    # Virtual framebuffer (headed browser support without physical display) \
+    xvfb \
+    # Full XFCE desktop (window manager + taskbar — makes browsers behave like real machine) \
+    xfce4 \
+    xfce4-terminal \
+    dbus-x11 \
+    # VNC server for optional remote debugging \
+    x11vnc \
+    # Network / fetch \
+    ca-certificates \
+    curl \
+    wget \
+    unzip \
+    # Utilities \
+    procps \
+    # Fonts (browser rendering) \
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Node.js 22 LTS ───────────────────────────────────────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN node --version && npm --version
+
+WORKDIR /app
+
+# ── npm packages ─────────────────────────────────────────────────────────────
+COPY package.json .
+# Prevent Taiko from downloading its own bundled browser at install time.
+ENV TAIKO_SKIP_BROWSER_DOWNLOAD=1
+RUN npm install
+
+# Install Playwright-bundled Chromium + Firefox with all system library deps.
+# These provide baseline browser versions; additional versioned binaries are
+# synced from S3 at container startup by sync_browsers_from_s3_linux.js.
+RUN npx playwright install --with-deps chromium firefox
+
+# ── Application scripts ──────────────────────────────────────────────────────
+COPY sync_browsers_from_s3_linux.js .
+COPY run_extractor.js .
+COPY window_elements_extractor.html .
+COPY generate_html.js .
+COPY db.js .
+COPY test_page.html .
+COPY interceptions_runner.js .
+COPY interceptor_page.html .
+COPY entrypoint_linux.sh .
+
+RUN chmod +x /app/entrypoint_linux.sh
+
+CMD ["/app/entrypoint_linux.sh"]

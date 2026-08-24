@@ -33,7 +33,9 @@ const {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CACHE_DIR          = 'C:\\browsers';
+const isWin     = process.platform === 'win32';
+const CACHE_DIR = isWin ? 'C:\\browsers' : '/browsers';
+const PLAT      = isWin ? 'win64' : 'linux64';
 const INTERCEPTOR_PORT   = 19998;
 const INTERCEPTOR_URL    = `http://localhost:${INTERCEPTOR_PORT}/`;
 const NAV_TIMEOUT        = 15000;
@@ -70,12 +72,12 @@ async function discoverChromes() {
     const dir = path.join(CACHE_DIR, 'chrome');
     if (!fs.existsSync(dir)) return [];
     return fs.readdirSync(dir)
-      .filter(e => e.startsWith('win64-'))
+      .filter(e => e.startsWith(`${PLAT}-`))
       .map(e => ({
         browser:        Browser.CHROME,
-        buildId:        e.replace('win64-', ''),
-        executablePath: path.join(dir, e, 'chrome-win64', 'chrome.exe'),
-        platform:       'win64',
+        buildId:        e.replace(`${PLAT}-`, ''),
+        executablePath: path.join(dir, e, `chrome-${PLAT}`, isWin ? 'chrome.exe' : 'chrome'),
+        platform:       PLAT,
       }))
       .filter(b => fs.existsSync(b.executablePath))
       .sort((a, b) => a.buildId.localeCompare(b.buildId, undefined, { numeric: true }));
@@ -94,8 +96,8 @@ async function discoverChromedrivers() {
     if (!fs.existsSync(dir)) return new Map();
     const map = new Map();
     fs.readdirSync(dir).forEach(e => {
-      const exe = path.join(dir, e, 'chromedriver-win64', 'chromedriver.exe');
-      if (fs.existsSync(exe)) map.set(e.replace('win64-', ''), exe);
+      const exe = path.join(dir, e, `chromedriver-${PLAT}`, isWin ? 'chromedriver.exe' : 'chromedriver');
+      if (fs.existsSync(exe)) map.set(e.replace(`${PLAT}-`, ''), exe);
     });
     return map;
   }

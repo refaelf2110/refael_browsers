@@ -21,9 +21,10 @@ const path = require('path');
 const http = require('http');
 const { saveWindowElements, getWindowElementBrowsers } = require('./db');
 
-const CACHE_DIR         = 'C:\\browsers';
-const FF_DIR            = path.join(CACHE_DIR, 'firefox');
-const EDGE_MANIFEST     = path.join(CACHE_DIR, 'edgedriver', 'manifest.json');
+const isWin         = process.platform === 'win32';
+const CACHE_DIR     = isWin ? 'C:\\browsers' : '/browsers';
+const FF_DIR        = path.join(CACHE_DIR, 'firefox');
+const EDGE_MANIFEST = path.join(CACHE_DIR, 'edgedriver', 'manifest.json');
 const EXTRACTOR_PORT    = 19999;
 const EXTRACTOR_URL     = `http://localhost:${EXTRACTOR_PORT}/`;
 const EXTRACTOR_TIMEOUT = 8 * 60 * 1000;
@@ -35,9 +36,10 @@ let _nextPort = 20000;
 function allocatePort() { return _nextPort++; }
 
 function geckoExeFor(ffMajor) {
+  const exe = isWin ? 'geckodriver.exe' : 'geckodriver';
   return Number(ffMajor) < 91
-    ? path.join(CACHE_DIR, 'geckodriver', 'v0.30.0', 'geckodriver.exe')
-    : path.join(CACHE_DIR, 'geckodriver', 'latest', 'geckodriver.exe');
+    ? path.join(CACHE_DIR, 'geckodriver', 'v0.30.0', exe)
+    : path.join(CACHE_DIR, 'geckodriver', 'latest', exe);
 }
 
 function formatElapsed(ms) {
@@ -428,10 +430,10 @@ async function buildTasks(done) {
     }
     if (fs.existsSync(FF_DIR)) {
       const ffDirs = fs.readdirSync(FF_DIR)
-        .filter(d => fs.existsSync(path.join(FF_DIR, d, 'firefox.exe')))
+        .filter(d => fs.existsSync(path.join(FF_DIR, d, isWin ? 'firefox.exe' : 'firefox')))
         .sort((a, b) => Number(a) - Number(b));
       for (const major of ffDirs) {
-        const exe = path.join(FF_DIR, major, 'firefox.exe');
+        const exe = path.join(FF_DIR, major, isWin ? 'firefox.exe' : 'firefox');
         const gecko = geckoExeFor(major);
         if (!fs.existsSync(gecko)) continue;
         for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
@@ -459,7 +461,7 @@ async function buildTasks(done) {
         add(lbl, () => runWebdriverIOChrome(lbl, b.executablePath, driverPath, headless));
       }
     }
-    const latestGecko = path.join(CACHE_DIR, 'geckodriver', 'latest', 'geckodriver.exe');
+    const latestGecko = path.join(CACHE_DIR, 'geckodriver', 'latest', isWin ? 'geckodriver.exe' : 'geckodriver');
     if (fs.existsSync(latestGecko)) {
       for (const b of ppFirefoxes) {
         const major = b.buildId.replace(/^[^_]+_/, '').split('.')[0];
