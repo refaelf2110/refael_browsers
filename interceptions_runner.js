@@ -28,7 +28,7 @@ const http                              = require('http');
 const fs                                = require('fs');
 const path                              = require('path');
 const {
-  createInterceptionSession, finalizeInterceptionSession, saveInterceptions,
+  createInterceptionSession, finalizeInterceptionSession, saveInterceptions, uploadToS3,
 } = require('./db');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -1098,9 +1098,11 @@ async function run() {
     }
 
     console.log('\n[done] All interception sessions complete. View at http://localhost:3000/interceptions');
+    await uploadToS3();
   } finally {
     server.close();
   }
+  process.exit(0);
 }
 
 run().catch(err => { console.error('[fatal]', err); process.exit(1); });

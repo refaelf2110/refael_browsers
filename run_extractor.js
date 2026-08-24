@@ -19,7 +19,7 @@ const { spawn } = require('child_process');
 const fs   = require('fs');
 const path = require('path');
 const http = require('http');
-const { saveWindowElements, getWindowElementBrowsers } = require('./db');
+const { saveWindowElements, getWindowElementBrowsers, uploadToS3 } = require('./db');
 
 const isWin         = process.platform === 'win32';
 const CACHE_DIR     = isWin ? 'C:\\browsers' : '/browsers';
@@ -498,6 +498,8 @@ async function runAll() {
     server.close();
   }
   console.log(`\n[extractor] All done in ${formatElapsed(Date.now() - startMs)}.`);
+  await uploadToS3();
+  process.exit(0);
 }
 
 runAll().catch(err => { console.error(err); process.exit(1); });

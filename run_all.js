@@ -45,7 +45,7 @@ const { spawn } = require('child_process');
 const fs   = require('fs');
 const path = require('path');
 const { generateHTML } = require('./generate_html');
-const { saveRun }      = require('./db');
+const { saveRun, uploadToS3 } = require('./db');
 
 const CACHE_DIR     = isWin ? 'C:\\browsers' : '/browsers';
 const FF_DIR        = path.join(CACHE_DIR, 'firefox');
@@ -1044,6 +1044,7 @@ async function run() {
   const elapsed = formatElapsed(Date.now() - startMs);
   console.log(`\nTotal time: ${elapsed}`);
   generateResultsHTML(elapsed, 'Full');
+  await uploadToS3();
   process.exit(0);
 }
 

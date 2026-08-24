@@ -2,9 +2,12 @@
 
 const Database = require('better-sqlite3');
 const path = require('path');
+const os   = require('os');
+const fs   = require('fs');
 const { EXCLUDED_REASONS } = require('./generate_html');
 
-const DB_PATH = 'C:\\browsers\\results.db';
+const isWin   = process.platform === 'win32';
+const DB_PATH = isWin ? 'C:\\browsers\\results.db' : '/browsers/results.db';
 
 let _db;
 
@@ -388,10 +391,133 @@ function getTopInterceptedFunctions(sessionId, limit = 50) {
   ).all(sessionId, limit);
 }
 
+// ── S3 / Parquet upload ───────────────────────────────────────────────────────
+
+const PARQUET_SCHEMAS = {
+  runs: {
+    id:           { type: 'UTF8' },
+    run_type:     { type: 'UTF8' },
+    completed_at: { type: 'UTF8' },
+    elapsed:      { type: 'UTF8' },
+  },
+  results: {
+    id:          { type: 'UTF8' },
+    run_id:      { type: 'UTF8' },
+    framework:   { type: 'UTF8' },
+    label:       { type: 'UTF8' },
+    major:       { type: 'UTF8' },
+    mode:        { type: 'UTF8' },
+    all_reasons: { type: 'UTF8' },
+    error:       { type: 'UTF8', optional: true },
+  },
+  window_elements: {
+    id:            { type: 'UTF8' },
+    browser_label: { type: 'UTF8' },
+    collected_at:  { type: 'UTF8' },
+    name:          { type: 'UTF8', optional: true },
+    type:          { type: 'UTF8', optional: true },
+    value:         { type: 'UTF8', optional: true },
+    raw:           { type: 'UTF8' },
+  },
+  interception_sessions: {
+    id:            { type: 'UTF8' },
+    framework:     { type: 'UTF8' },
+    browser_label: { type: 'UTF8' },
+    started_at:    { type: 'UTF8' },
+    completed_at:  { type: 'UTF8', optional: true },
+    action_count:  { type: 'INT32' },
+    call_count:    { type: 'INT32' },
+  },
+  interceptions: {
+    id:             { type: 'UTF8' },
+    session_id:     { type: 'UTF8' },
+    seq:            { type: 'INT32' },
+    action:         { type: 'UTF8' },
+    fn_name:        { type: 'UTF8' },
+    args_json:      { type: 'UTF8', optional: true },
+    this_arg:       { type: 'UTF8', optional: true },
+    caller:         { type: 'UTF8', optional: true },
+    return_val:     { type: 'UTF8', optional: true },
+    is_constructor: { type: 'BOOLEAN' },
+    duration_ms:    { type: 'DOUBLE' },
+    stack:          { type: 'UTF8', optional: true },
+    triggered_at:   { type: 'UTF8' },
+  },
+};
+
+function coerceParquetRow(schemaDef, row) {
+  const out = {};
+  for (const [col, def] of Object.entries(schemaDef)) {
+    let val = row[col];
+    if (val === null || val === undefined) {
+      if (def.optional) { out[col] = null; continue; }
+      if (def.type === 'UTF8')    { out[col] = ''; continue; }
+      if (def.type === 'INT32')   { out[col] = 0;  continue; }
+      if (def.type === 'DOUBLE')  { out[col] = 0;  continue; }
+      if (def.type === 'BOOLEAN') { out[col] = false; continue; }
+    }
+    if (def.type === 'UTF8')    out[col] = String(val);
+    else if (def.type === 'INT32')   out[col] = Number(val) | 0;
+    else if (def.type === 'DOUBLE')  out[col] = Number(val) || 0;
+    else if (def.type === 'BOOLEAN') out[col] = val === 1 || val === true;
+    else out[col] = val;
+  }
+  return out;
+}
+
+async function uploadTableToS3(s3, bucket, tableName, rows, jobId) {
+  const parquet = require('@dsnp/parquetjs');
+  const { PutObjectCommand } = require('@aws-sdk/client-s3');
+  const schemaDef = PARQUET_SCHEMAS[tableName];
+  const schema    = new parquet.ParquetSchema(schemaDef);
+  const tmpFile   = path.join(os.tmpdir(), `${tableName}-${jobId}.parquet`);
+
+  const writer = await parquet.ParquetWriter.openFile(schema, tmpFile);
+  for (const row of rows) await writer.appendRow(coerceParquetRow(schemaDef, row));
+  await writer.close();
+
+  const s3Key = `${tableName}/${jobId}.parquet`;
+  await s3.send(new PutObjectCommand({
+    Bucket:      bucket,
+    Key:         s3Key,
+    Body:        fs.readFileSync(tmpFile),
+    ContentType: 'application/octet-stream',
+  }));
+  fs.unlinkSync(tmpFile);
+  console.log(`[s3] Uploaded ${rows.length} rows → s3://${bucket}/${s3Key}`);
+}
+
+/**
+ * Upload all SQLite tables to S3 as Parquet.
+ * Only runs when RESULTS_BUCKET env var is set (i.e. inside ECS container).
+ * Uses JOB_ID env var as the unique S3 key suffix so each run gets its own file.
+ */
+async function uploadToS3() {
+  const bucket = process.env.RESULTS_BUCKET;
+  if (!bucket) { console.log('[s3] RESULTS_BUCKET not set — skipping S3 upload'); return; }
+
+  const { S3Client } = require('@aws-sdk/client-s3');
+  const s3    = new S3Client({});
+  const db    = getDb();
+  const jobId = process.env.JOB_ID || `local-${Date.now()}`;
+
+  console.log(`[s3] Uploading results to s3://${bucket}/ (jobId=${jobId})`);
+
+  const tables = ['runs', 'results', 'window_elements', 'interception_sessions', 'interceptions'];
+  for (const table of tables) {
+    const rows = db.prepare(`SELECT * FROM ${table}`).all();
+    if (rows.length === 0) { console.log(`[s3] ${table}: empty, skipping`); continue; }
+    await uploadTableToS3(s3, bucket, table, rows, jobId);
+  }
+
+  console.log('[s3] Upload complete.');
+}
+
 module.exports = {
   saveRun, getLatestRun, getRunById, getAllRuns,
   saveWindowElements, getWindowElementBrowsers, getWindowElements, searchWindowFunctions,
   createInterceptionSession, finalizeInterceptionSession, saveInterceptions,
   getInterceptionSessions, getInterceptionSession, getInterceptions,
   getInterceptionActions, getTopInterceptedFunctions,
+  uploadToS3,
 };
