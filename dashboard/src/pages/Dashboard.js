@@ -1,159 +1,71 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getRuns } from '../api';
+import { getRuns, getRun } from '../api';
+import RunView from '../components/RunView';
 import LoadingSpinner from '../components/LoadingSpinner';
-import ErrorMessage from '../components/ErrorMessage';
-
-const pageStyle = {
-  padding: '32px 28px',
-  maxWidth: '1100px',
-};
-
-const cardStyle = {
-  background: '#161b22',
-  border: '1px solid #30363d',
-  borderRadius: '8px',
-  padding: '16px 22px',
-  fontSize: '14px',
-};
-
-const sectionHeadStyle = {
-  fontSize: '13px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  color: '#8b949e',
-  marginBottom: '16px',
-  paddingBottom: '8px',
-  borderBottom: '1px solid #21262d',
-};
-
-const thStyle = {
-  textAlign: 'left',
-  padding: '8px 12px',
-  color: '#8b949e',
-  fontWeight: 500,
-  borderBottom: '1px solid #21262d',
-  fontSize: '11px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-};
-
-const tdStyle = {
-  padding: '8px 12px',
-  borderBottom: '1px solid #161b22',
-  verticalAlign: 'middle',
-  fontSize: '13px',
-};
 
 export default function Dashboard() {
-  const [runs, setRuns] = useState(null);
-  const [error, setError] = useState(null);
+  const [latestRun, setLatestRun]   = useState(null);
+  const [loading,   setLoading]     = useState(true);
+  const [error,     setError]       = useState(null);
+  const [runType,   setRunType]     = useState('any'); // 'any' | 'mini' | 'full'
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLatestRun(null);
+    setError(null);
+
     getRuns()
-      .then(setRuns)
-      .catch(setError);
-  }, []);
+      .then(async runs => {
+        if (cancelled) return;
+        const filtered = runType === 'any' ? runs : runs.filter(r => r.run_type === runType);
+        const latest = filtered[0]; // runs are ordered newest-first
+        if (!latest) { setLoading(false); return; }
+        const run = await getRun(latest.id);
+        if (!cancelled) { setLatestRun(run); setLoading(false); }
+      })
+      .catch(err => { if (!cancelled) { setError(err); setLoading(false); } });
 
-  if (error) return <ErrorMessage error={error} />;
-  if (!runs) return <LoadingSpinner />;
+    return () => { cancelled = true; };
+  }, [runType]);
 
-  const latest = { mini: null, full: null };
-  for (const r of runs) {
-    if (!latest[r.run_type]) latest[r.run_type] = r;
-  }
+  const tabStyle = (active) => ({
+    padding: '6px 14px',
+    borderRadius: '6px',
+    border: `1px solid ${active ? '#58a6ff' : '#30363d'}`,
+    background: active ? '#1f6feb22' : 'transparent',
+    color: active ? '#58a6ff' : '#8b949e',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: active ? 600 : 400,
+  });
 
   return (
-    <div style={pageStyle}>
-      <h1 style={{ fontSize: '24px', color: '#58a6ff', marginBottom: '8px' }}>
-        Browser Detection Matrix
-      </h1>
-      <p style={{ fontSize: '13px', color: '#8b949e', marginBottom: '28px' }}>
-        Results dashboard — data from API backend
-      </p>
-
-      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '32px' }}>
-        <div style={cardStyle}>
-          {latest.mini ? (
-            <>
-              <Link to={`/run/${latest.mini.id}`} style={{ color: '#58a6ff', fontSize: '14px' }}>
-                Latest Mini results
-              </Link>{' '}
-              <span style={{ color: '#8b949e', fontSize: '13px' }}>
-                — run #{latest.mini.id}, {latest.mini.completed_at}
-              </span>
-            </>
-          ) : (
-            <span style={{ color: '#6e7681' }}>No mini run yet</span>
-          )}
-        </div>
-        <div style={cardStyle}>
-          {latest.full ? (
-            <>
-              <Link to={`/run/${latest.full.id}`} style={{ color: '#3fb950', fontSize: '14px' }}>
-                Latest Full results
-              </Link>{' '}
-              <span style={{ color: '#8b949e', fontSize: '13px' }}>
-                — run #{latest.full.id}, {latest.full.completed_at}
-              </span>
-            </>
-          ) : (
-            <span style={{ color: '#6e7681' }}>No full run yet</span>
-          )}
+    <div style={{ padding: '28px', fontFamily: "'Segoe UI', Tahoma, sans-serif" }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '22px', color: '#58a6ff', margin: 0 }}>
+          Latest Detection Results
+        </h1>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {[['any','Latest'], ['mini','Mini'], ['full','Full']].map(([v, label]) => (
+            <button key={v} style={tabStyle(runType === v)} onClick={() => setRunType(v)}>{label}</button>
+          ))}
+          <Link to="/results" style={{ marginLeft: '12px', fontSize: '12px', color: '#8b949e' }}>All runs →</Link>
         </div>
       </div>
 
-      <h2 style={sectionHeadStyle}>All Runs</h2>
-
-      {runs.length === 0 ? (
-        <p style={{ color: '#6e7681', padding: '20px', textAlign: 'center' }}>
-          No runs stored yet.
+      {latestRun && (
+        <p style={{ fontSize: '12px', color: '#6e7681', marginBottom: '20px' }}>
+          Showing run #{latestRun.id} ({latestRun.run_type}) — {latestRun.completed_at} — took {latestRun.elapsed}
         </p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>#</th>
-              <th style={thStyle}>Type</th>
-              <th style={thStyle}>Completed at</th>
-              <th style={thStyle}>Elapsed</th>
-              <th style={thStyle}>Link</th>
-            </tr>
-          </thead>
-          <tbody>
-            {runs.map(r => (
-              <tr
-                key={r.id}
-                style={{ cursor: 'default' }}
-                onMouseEnter={e => {
-                  Array.from(e.currentTarget.cells).forEach(td => {
-                    td.style.background = '#161b22';
-                  });
-                }}
-                onMouseLeave={e => {
-                  Array.from(e.currentTarget.cells).forEach(td => {
-                    td.style.background = 'transparent';
-                  });
-                }}
-              >
-                <td style={tdStyle}>{r.id}</td>
-                <td style={tdStyle}>
-                  {r.run_type === 'mini' ? (
-                    <span style={{ color: '#58a6ff' }}>Mini</span>
-                  ) : (
-                    <span style={{ color: '#3fb950' }}>Full</span>
-                  )}
-                </td>
-                <td style={{ ...tdStyle, fontFamily: 'monospace' }}>{r.completed_at}</td>
-                <td style={tdStyle}>{r.elapsed}</td>
-                <td style={tdStyle}>
-                  <Link to={`/run/${r.id}`}>/run/{r.id}</Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       )}
+
+      {loading && <LoadingSpinner />}
+      {!loading && !error && !latestRun && (
+        <p style={{ color: '#6e7681', fontSize: '13px' }}>No detection runs found. <Link to="/browsers">Run one now →</Link></p>
+      )}
+      {!loading && <RunView run={latestRun} error={error} loading={false} />}
     </div>
   );
 }

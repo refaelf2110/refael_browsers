@@ -45,6 +45,7 @@ export default function Nav() {
     <nav style={navStyle}>
       <Link to="/" style={logoStyle}>Browser Detection Matrix</Link>
       <NavLink to="/">Dashboard</NavLink>
+      <NavLink to="/results">Results</NavLink>
       <NavLink to="/diff">Property Diff</NavLink>
       <NavLink to="/canirun">Can I Run</NavLink>
       <NavLink to="/interceptions" color="#f0883e">Interceptions</NavLink>
