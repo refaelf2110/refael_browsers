@@ -8,7 +8,7 @@ export default function Dashboard() {
   const [latestRun, setLatestRun]   = useState(null);
   const [loading,   setLoading]     = useState(true);
   const [error,     setError]       = useState(null);
-  const [runType,   setRunType]     = useState('any'); // 'any' | 'mini' | 'full'
+  const [runType,   setRunType]     = useState('full'); // 'any' | 'mini' | 'full'
 
   useEffect(() => {
     let cancelled = false;
@@ -29,6 +29,25 @@ export default function Dashboard() {
 
     return () => { cancelled = true; };
   }, [runType]);
+
+  function OsBadge({ platform }) {
+    if (!platform) return null;
+    const isWin = platform === 'win32';
+    const label = isWin ? 'Windows' : 'Linux';
+    const emoji = isWin ? '🪟' : '🐧';
+    const color = isWin ? '#5199e4' : '#e8a020';
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: '3px',
+        background: isWin ? '#001d3d' : '#2d1a00',
+        color, border: `1px solid ${isWin ? '#1a5276' : '#7d5a00'}`,
+        borderRadius: '4px', padding: '1px 7px', fontSize: '11px',
+        verticalAlign: 'middle', marginLeft: '6px',
+      }}>
+        {emoji} {label}
+      </span>
+    );
+  }
 
   const tabStyle = (active) => ({
     padding: '6px 14px',
@@ -57,7 +76,8 @@ export default function Dashboard() {
 
       {latestRun && (
         <p style={{ fontSize: '12px', color: '#6e7681', marginBottom: '20px' }}>
-          Showing run #{latestRun.id} ({latestRun.run_type}) — {latestRun.completed_at} — took {latestRun.elapsed}
+          Showing run {latestRun.id} ({latestRun.run_type}) — {latestRun.completed_at} — took {latestRun.elapsed}
+          <OsBadge platform={latestRun.platform} />
         </p>
       )}
 

@@ -69,6 +69,10 @@ resource "aws_glue_catalog_table" "runs" {
       name = "elapsed"
       type = "string"
     }
+    columns {
+      name = "platform"
+      type = "string"
+    }
   }
 }
 

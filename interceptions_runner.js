@@ -28,7 +28,7 @@ const http                              = require('http');
 const fs                                = require('fs');
 const path                              = require('path');
 const {
-  createInterceptionSession, finalizeInterceptionSession, saveInterceptions, uploadToS3,
+  createInterceptionSession, finalizeInterceptionSession, saveInterceptions, uploadToS3, saveRun,
 } = require('./db');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -47,6 +47,11 @@ const WAIT_READY_TIMEOUT = 8000;
 
 let _nextPort = 19100;
 function allocatePort() { return _nextPort++; }
+
+function formatElapsed(ms) {
+  const s = Math.round(ms / 1000);
+  return s >= 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`;
+}
 
 // ── Local HTTP server ─────────────────────────────────────────────────────────
 
@@ -1034,6 +1039,7 @@ async function runWebdriverIO(major, chromePath, driverPath, headless) {
 
 async function run() {
   const server = await startInterceptorServer();
+  const startMs = Date.now();
 
   try {
     const chromes      = await discoverChromes();
@@ -1097,7 +1103,9 @@ async function run() {
       console.log('[setup] No Chrome+Driver pair found — skipping Puppeteer / Selenium / WebdriverIO');
     }
 
-    console.log('\n[done] All interception sessions complete. View at http://localhost:3000/interceptions');
+    const elapsed = formatElapsed(Date.now() - startMs);
+    console.log(`\n[done] All interception sessions complete in ${elapsed}.`);
+    saveRun('interceptions', elapsed, [], process.platform);
     await uploadToS3();
   } finally {
     server.close();

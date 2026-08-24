@@ -59,16 +59,17 @@ function toRows(results) {
 
 async function getRuns() {
   const runs = await runQuery(
-    `SELECT id, run_type, completed_at, elapsed FROM runs ORDER BY CAST(id AS BIGINT) DESC`
+    `SELECT id, run_type, completed_at, elapsed, platform FROM runs ORDER BY completed_at DESC`
   );
   return { statusCode: 200, body: runs };
 }
 
 async function getRunById(id) {
-  if (!/^\d+$/.test(id)) return { statusCode: 400, body: { error: 'Invalid id' } };
+  // Allow alphanumeric, hyphens, dots, colons — covers JOB_IDs and ISO timestamps
+  if (!/^[a-zA-Z0-9\-:.]+$/.test(id)) return { statusCode: 400, body: { error: 'Invalid id' } };
 
   const [run] = await runQuery(
-    `SELECT id, run_type, completed_at, elapsed FROM runs WHERE id = '${id}' LIMIT 1`
+    `SELECT id, run_type, completed_at, elapsed, platform FROM runs WHERE id = '${id}' LIMIT 1`
   );
   if (!run) return { statusCode: 404, body: { error: `Run #${id} not found` } };
 
@@ -91,7 +92,7 @@ async function getRunById(id) {
 
 async function getInterceptions() {
   const sessions = await runQuery(
-    `SELECT * FROM interception_sessions ORDER BY CAST(id AS BIGINT) DESC`
+    `SELECT * FROM interception_sessions ORDER BY completed_at DESC`
   );
   return { statusCode: 200, body: sessions };
 }

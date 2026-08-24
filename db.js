@@ -16,14 +16,15 @@ function getDb() {
     _db = new Database(DB_PATH);
     _db.exec(`
       CREATE TABLE IF NOT EXISTS runs (
-        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        id           TEXT    PRIMARY KEY,
         run_type     TEXT    NOT NULL,
         completed_at TEXT    NOT NULL,
-        elapsed      TEXT    NOT NULL
+        elapsed      TEXT    NOT NULL,
+        platform     TEXT    NOT NULL DEFAULT ''
       );
       CREATE TABLE IF NOT EXISTS results (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        run_id      INTEGER NOT NULL REFERENCES runs(id),
+        run_id      TEXT    NOT NULL,
         framework   TEXT    NOT NULL,
         label       TEXT    NOT NULL,
         major       TEXT    NOT NULL,
@@ -74,6 +75,7 @@ function getDb() {
     `);
     /* Migrate existing databases that pre-date the new columns. */
     const newCols = [
+      'ALTER TABLE runs ADD COLUMN platform TEXT NOT NULL DEFAULT \'\'',
       'ALTER TABLE interceptions ADD COLUMN this_arg       TEXT',
       'ALTER TABLE interceptions ADD COLUMN caller         TEXT',
       'ALTER TABLE interceptions ADD COLUMN return_val     TEXT',
@@ -95,13 +97,17 @@ function getDb() {
  * @param {Array}  results  - array of result objects from the run scripts
  * @returns {number}        - inserted run id
  */
-function saveRun(runType, elapsed, results) {
+function saveRun(runType, elapsed, results, platform) {
   const db = getDb();
   const completedAt = new Date().toISOString();
+  // Use JOB_ID (set by Lambda/ECS) so each container run gets a globally unique ID.
+  // Fall back to ISO timestamp for local development.
+  const runId = process.env.JOB_ID || completedAt;
+  const platformStr = platform || process.platform || '';
 
-  const { lastInsertRowid: runId } = db.prepare(
-    'INSERT INTO runs (run_type, completed_at, elapsed) VALUES (?, ?, ?)'
-  ).run(runType, completedAt, elapsed);
+  db.prepare(
+    'INSERT OR REPLACE INTO runs (id, run_type, completed_at, elapsed, platform) VALUES (?, ?, ?, ?, ?)'
+  ).run(runId, runType, completedAt, elapsed, platformStr);
 
   const insertResult = db.prepare(
     'INSERT INTO results (run_id, framework, label, major, mode, all_reasons, error) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -121,7 +127,7 @@ function saveRun(runType, elapsed, results) {
     }
   })(results);
 
-  console.log(`[db] Saved run #${runId} (${runType}) — ${results.length} results at ${completedAt}`);
+  console.log(`[db] Saved run ${runId} (${runType}) — ${results.length} results at ${completedAt}`);
   return runId;
 }
 
@@ -132,7 +138,7 @@ function saveRun(runType, elapsed, results) {
 function getLatestRun(runType) {
   const db = getDb();
   const run = db.prepare(
-    'SELECT * FROM runs WHERE run_type = ? ORDER BY id DESC LIMIT 1'
+    'SELECT * FROM runs WHERE run_type = ? ORDER BY completed_at DESC LIMIT 1'
   ).get(runType);
 
   if (!run) return null;
@@ -191,7 +197,7 @@ function getRunById(id) {
  */
 function getAllRuns() {
   return getDb().prepare(
-    'SELECT id, run_type, completed_at, elapsed FROM runs ORDER BY id DESC'
+    'SELECT id, run_type, completed_at, elapsed, platform FROM runs ORDER BY completed_at DESC'
   ).all();
 }
 
@@ -399,6 +405,7 @@ const PARQUET_SCHEMAS = {
     run_type:     { type: 'UTF8' },
     completed_at: { type: 'UTF8' },
     elapsed:      { type: 'UTF8' },
+    platform:     { type: 'UTF8' },
   },
   results: {
     id:          { type: 'UTF8' },

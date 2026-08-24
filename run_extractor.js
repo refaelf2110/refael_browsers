@@ -19,9 +19,10 @@ const { spawn } = require('child_process');
 const fs   = require('fs');
 const path = require('path');
 const http = require('http');
-const { saveWindowElements, getWindowElementBrowsers, uploadToS3 } = require('./db');
+const { saveWindowElements, getWindowElementBrowsers, uploadToS3, saveRun } = require('./db');
 
 const isWin         = process.platform === 'win32';
+const OS_TAG        = isWin ? 'win' : 'linux';
 const CACHE_DIR     = isWin ? 'C:\\browsers' : '/browsers';
 const FF_DIR        = path.join(CACHE_DIR, 'firefox');
 const EDGE_MANIFEST = path.join(CACHE_DIR, 'edgedriver', 'manifest.json');
@@ -84,7 +85,7 @@ async function extractFromPage(page, lbl) {
     { timeout: EXTRACTOR_TIMEOUT, polling: 3000 }
   ).catch(() => {});
   const vars = await page.evaluate(() => Array.isArray(window.vars_result) ? window.vars_result : []).catch(() => []);
-  if (vars.length > 0) saveWindowElements(lbl, vars);
+  if (vars.length > 0) saveWindowElements(`${lbl}-${OS_TAG}`, vars);
   else console.log(`[extractor] ${lbl}: no data collected`);
 }
 
@@ -162,7 +163,7 @@ async function runSeleniumChrome(lbl, chromePath, driverPath, headless) {
     await driver.manage().setTimeouts({ script: EXTRACTOR_TIMEOUT + 30000 });
     await driver.executeAsyncScript(EXTRACTOR_WAIT_JS).catch(() => {});
     const vars = await driver.executeScript('return window.vars_result || []').catch(() => []);
-    if (vars.length > 0) saveWindowElements(lbl, vars);
+    if (vars.length > 0) saveWindowElements(`${lbl}-${OS_TAG}`, vars);
     else console.log(`[extractor] ${lbl}: no data`);
   } catch(err) {
     console.error(`[extractor] ${lbl} ERROR: ${err.message.split('\n')[0]}`);
@@ -188,7 +189,7 @@ async function runSeleniumFirefox(lbl, ffPath, geckodriverPath, headless) {
     await driver.manage().setTimeouts({ script: EXTRACTOR_TIMEOUT + 30000 });
     await driver.executeAsyncScript(EXTRACTOR_WAIT_JS).catch(() => {});
     const vars = await driver.executeScript('return window.vars_result || []').catch(() => []);
-    if (vars.length > 0) saveWindowElements(lbl, vars);
+    if (vars.length > 0) saveWindowElements(`${lbl}-${OS_TAG}`, vars);
     else console.log(`[extractor] ${lbl}: no data`);
   } catch(err) {
     console.error(`[extractor] ${lbl} ERROR: ${err.message.split('\n')[0]}`);
@@ -211,7 +212,7 @@ async function runSeleniumEdge(lbl, edgePath, headless) {
     await driver.manage().setTimeouts({ script: EXTRACTOR_TIMEOUT + 30000 });
     await driver.executeAsyncScript(EXTRACTOR_WAIT_JS).catch(() => {});
     const vars = await driver.executeScript('return window.vars_result || []').catch(() => []);
-    if (vars.length > 0) saveWindowElements(lbl, vars);
+    if (vars.length > 0) saveWindowElements(`${lbl}-${OS_TAG}`, vars);
     else console.log(`[extractor] ${lbl}: no data`);
   } catch(err) {
     console.error(`[extractor] ${lbl} ERROR: ${err.message.split('\n')[0]}`);
@@ -289,7 +290,7 @@ async function runWebdriverIOFirefox(lbl, ffPath, geckodriverPath, headless) {
       await new Promise(r => setTimeout(r, 3000));
     }
     const vars = await wdioBrowser.execute(function() { return window.vars_result || []; }).catch(() => []);
-    if (vars.length > 0) saveWindowElements(lbl, vars);
+    if (vars.length > 0) saveWindowElements(`${lbl}-${OS_TAG}`, vars);
     else console.log(`[extractor] ${lbl}: no data`);
   } catch(err) {
     console.error(`[extractor] ${lbl} ERROR: ${err.message.split('\n')[0]}`);
@@ -497,7 +498,9 @@ async function runAll() {
   } finally {
     server.close();
   }
-  console.log(`\n[extractor] All done in ${formatElapsed(Date.now() - startMs)}.`);
+  const elapsed = formatElapsed(Date.now() - startMs);
+  console.log(`\n[extractor] All done in ${elapsed}.`);
+  saveRun('extractor', elapsed, [], process.platform);
   await uploadToS3();
   process.exit(0);
 }

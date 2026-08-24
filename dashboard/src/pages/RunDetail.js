@@ -3,6 +3,25 @@ import { useParams, Link } from 'react-router-dom';
 import { getRun } from '../api';
 import RunView from '../components/RunView';
 
+function OsBadge({ platform }) {
+  if (!platform) return null;
+  const isWin = platform === 'win32';
+  const label = isWin ? 'Windows' : 'Linux';
+  const emoji = isWin ? '🪟' : '🐧';
+  const color = isWin ? '#5199e4' : '#e8a020';
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '3px',
+      background: isWin ? '#001d3d' : '#2d1a00',
+      color, border: `1px solid ${isWin ? '#1a5276' : '#7d5a00'}`,
+      borderRadius: '4px', padding: '2px 8px', fontSize: '12px',
+      verticalAlign: 'middle',
+    }}>
+      {emoji} {label}
+    </span>
+  );
+}
+
 export default function RunDetail() {
   const { id } = useParams();
   const [run, setRun] = useState(null);
@@ -21,8 +40,9 @@ export default function RunDetail() {
           <h1 style={{ fontSize: '26px', color: '#58a6ff', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             Browser Automation Detection Matrix
             <span style={{ fontSize: '12px', background: '#1f2937', color: '#58a6ff', border: '1px solid #30363d', borderRadius: '4px', padding: '2px 8px' }}>
-              {runLabel} #{run.id}
+              {runLabel} — {run.id}
             </span>
+            <OsBadge platform={run.platform} />
           </h1>
           <p style={{ fontSize: '13px', color: '#8b949e', marginBottom: '20px' }}>
             <Link to="/results">← Results</Link>
