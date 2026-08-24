@@ -35,7 +35,11 @@ const {
 
 const isWin     = process.platform === 'win32';
 const CACHE_DIR = isWin ? 'C:\\browsers' : '/browsers';
-const PLAT      = isWin ? 'win64' : 'linux64';
+// Version folder prefix: win64-{ver} on Windows, linux-{ver} on Linux (@puppeteer/browsers convention)
+const PLAT      = isWin ? 'win64' : 'linux';
+// Chrome binary subfolder inside the version folder (always linux64 on Linux)
+const CHROME_SUBDIR = isWin ? 'chrome-win64' : 'chrome-linux64';
+const CD_SUBDIR     = isWin ? 'chromedriver-win64' : 'chromedriver-linux64';
 const INTERCEPTOR_PORT   = 19998;
 const INTERCEPTOR_URL    = `http://localhost:${INTERCEPTOR_PORT}/`;
 const NAV_TIMEOUT        = 15000;
@@ -76,7 +80,7 @@ async function discoverChromes() {
       .map(e => ({
         browser:        Browser.CHROME,
         buildId:        e.replace(`${PLAT}-`, ''),
-        executablePath: path.join(dir, e, `chrome-${PLAT}`, isWin ? 'chrome.exe' : 'chrome'),
+        executablePath: path.join(dir, e, CHROME_SUBDIR, isWin ? 'chrome.exe' : 'chrome'),
         platform:       PLAT,
       }))
       .filter(b => fs.existsSync(b.executablePath))
@@ -96,7 +100,7 @@ async function discoverChromedrivers() {
     if (!fs.existsSync(dir)) return new Map();
     const map = new Map();
     fs.readdirSync(dir).forEach(e => {
-      const exe = path.join(dir, e, `chromedriver-${PLAT}`, isWin ? 'chromedriver.exe' : 'chromedriver');
+      const exe = path.join(dir, e, CD_SUBDIR, isWin ? 'chromedriver.exe' : 'chromedriver');
       if (fs.existsSync(exe)) map.set(e.replace(`${PLAT}-`, ''), exe);
     });
     return map;

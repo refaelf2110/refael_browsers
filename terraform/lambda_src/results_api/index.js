@@ -231,7 +231,7 @@ async function getBrowsersAvailable() {
 
       if (kind === 'chrome') {
         // folder: win64-131.0.6778.87  or  linux64-131.0.6778.87
-        const m = folder.match(/^(?:win64|linux64)-(.+)$/);
+        const m = folder.match(/^(?:win64|linux(?:64)?)-(.+)$/);
         if (m) chromeSet.add(m[1]);
       } else if (kind === 'chromedriver') {
         // skip — implied by chrome

@@ -11,7 +11,7 @@
  *   BROWSER_FILTER   — comma-separated kinds to sync: chrome,chromedriver,firefox,geckodriver
  *                      Omit to sync everything.
  *   MAX_VERSIONS     — keep only the N most-recent versions per browser kind (0 = unlimited).
- *                      Applies to versioned folders like chrome/linux64-{version}/...
+ *                      Applies to versioned folders like chrome/linux(?:64)?-{version}/...
  *   VERSION_LIST     — JSON object mapping browser kind to exact version strings to include,
  *                      e.g. {"chrome":["131.0.6778.87"],"firefox":["132"]}.
  *                      Overrides MAX_VERSIONS for kinds that appear in it; other kinds still
@@ -64,7 +64,7 @@ function compareVersions(a, b) {
 }
 
 // Filter objects by explicit version lists from VERSION_LIST.
-// For each kind that appears in versionList, keep only objects whose linux64-{version}
+// For each kind that appears in versionList, keep only objects whose linux(?:64)?-{version}
 // matches one of the listed versions. Kinds not in versionList are left untouched
 // (returned as-is) so applyVersionLimit can handle them.
 function applyVersionList(objects, versionList) {
@@ -75,7 +75,7 @@ function applyVersionList(objects, versionList) {
     const parts = obj.rel.split('/');
     const kind  = parts[0];
     const folder = parts[1] || '';
-    const m     = folder.match(/^linux64-(.+)$/);
+    const m     = folder.match(/^linux(?:64)?-(.+)$/);
 
     if (versionList[kind] !== undefined) {
       // This kind is controlled by VERSION_LIST — keep only exact matches
@@ -92,7 +92,7 @@ function applyVersionList(objects, versionList) {
   for (const kind of Object.keys(versionList)) {
     const selected = kept.filter(o => o.rel.split('/')[0] === kind);
     const versions = [...new Set(
-      selected.map(o => { const m = (o.rel.split('/')[1] || '').match(/^linux64-(.+)$/); return m ? m[1] : null; })
+      selected.map(o => { const m = (o.rel.split('/')[1] || '').match(/^linux(?:64)?-(.+)$/); return m ? m[1] : null; })
               .filter(Boolean)
     )];
     console.log(`  ${kind}: VERSION_LIST pinned to [${versionList[kind].join(', ')}], matched ${versions.length} version(s)`);
@@ -101,9 +101,9 @@ function applyVersionList(objects, versionList) {
   return kept;
 }
 
-// Keep only the MAX_VERSIONS most-recent versions per kind (linux64-{version} folders).
+// Keep only the MAX_VERSIONS most-recent versions per kind (linux(?:64)?-{version} folders).
 // Skips any kind that was handled by VERSION_LIST (those objects are already filtered).
-// Objects that don't match the linux64- pattern are always kept.
+// Objects that don't match the linux(?:64)?- pattern are always kept.
 function applyVersionLimit(objects, maxVersions) {
   if (!maxVersions) return objects;
 
@@ -113,7 +113,7 @@ function applyVersionLimit(objects, maxVersions) {
   for (const obj of objects) {
     const parts = obj.rel.split('/');
     const kind  = parts[0];
-    const m     = parts[1] && parts[1].match(/^linux64-(.+)$/);
+    const m     = parts[1] && parts[1].match(/^linux(?:64)?-(.+)$/);
     if (m) {
       if (VERSION_LIST && VERSION_LIST[kind] !== undefined) {
         unversioned.push(obj);
