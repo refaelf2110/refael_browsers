@@ -263,11 +263,15 @@ export default function Browsers() {
     return () => { cancelled = true; };
   }, []);
 
-  // Derive merged version lists across both OSes (union — show all known versions)
+  // Derive version lists scoped to the selected OSes.
+  // If no OS is selected yet, show the full union so users can preview what's available.
+  const activeOSes = selectedOS.size > 0
+    ? [...selectedOS]
+    : ['windows', 'linux'];
+
   const chromeVersions = available
-    ? [...new Set([...(available.windows?.chrome || []), ...(available.linux?.chrome || [])])]
+    ? [...new Set(activeOSes.flatMap(os => available[os]?.chrome || []))]
         .sort((a, b) => {
-          // descending semver
           const ap = a.split('.').map(n => parseInt(n, 10) || 0);
           const bp = b.split('.').map(n => parseInt(n, 10) || 0);
           for (let i = 0; i < Math.max(ap.length, bp.length); i++) {
@@ -279,9 +283,23 @@ export default function Browsers() {
     : [];
 
   const firefoxVersions = available
-    ? [...new Set([...(available.windows?.firefox || []), ...(available.linux?.firefox || [])])]
+    ? [...new Set(activeOSes.flatMap(os => available[os]?.firefox || []))]
         .sort((a, b) => parseInt(b, 10) - parseInt(a, 10))
     : [];
+
+  // Deselect browser versions that are no longer in the filtered list when OS changes
+  useEffect(() => {
+    const cSet = new Set(chromeVersions);
+    const fSet = new Set(firefoxVersions);
+    setChromeSel(prev => {
+      const next = new Set([...prev].filter(v => cSet.has(v)));
+      return next.size !== prev.size ? next : prev;
+    });
+    setFirefoxSel(prev => {
+      const next = new Set([...prev].filter(v => fSet.has(v)));
+      return next.size !== prev.size ? next : prev;
+    });
+  }, [selectedOS, available]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Platforms available for current run mode
   const availablePlatforms = ALL_PLATFORMS.filter(p => p.modes.includes(runMode));
