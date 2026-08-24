@@ -92,26 +92,12 @@ async function downloadChromes() {
 // ── Firefox ───────────────────────────────────────────────────────────────────
 
 async function downloadFirefox() {
-  console.log('\n── Firefox (linux) ──────────────────────────────────────────────');
-  // Use @puppeteer/browsers to resolve and download stable Firefox builds.
-  // It uses the firefox-for-puppeteer distribution which is linux-compatible.
-  const { resolveBuildId, BrowserTag } = require('@puppeteer/browsers');
-
-  // Get the latest stable buildId
-  const latestId = await resolveBuildId(Browser.FIREFOX, BrowserPlatform.LINUX, BrowserTag.LATEST);
-  console.log(`Latest Firefox buildId: ${latestId}`);
-
-  // Download latest only (Firefox has large binaries; expand MAX_FIREFOX_VERSIONS as needed)
-  const toDownload = [latestId];
-  for (const buildId of toDownload) {
-    console.log(`  Installing firefox@${buildId} linux...`);
-    await install({
-      browser:   Browser.FIREFOX,
-      buildId,
-      cacheDir:  CACHE_DIR,
-      platform:  BrowserPlatform.LINUX,
-    });
-  }
+  // @puppeteer/browsers packages Firefox as .tar.xz which requires the `xz`
+  // utility — not available on Windows. Skipping: the Linux container already
+  // has Playwright's bundled Firefox installed at image build time.
+  console.log('\n── Firefox (linux) — skipped (xz not available on Windows) ─────');
+  console.log('  The Linux container uses Playwright bundled Firefox as baseline.');
+  console.log('  Upload versioned Firefox to S3 manually if needed.');
 }
 
 // ── geckodriver ───────────────────────────────────────────────────────────────
