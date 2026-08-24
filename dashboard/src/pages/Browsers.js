@@ -12,6 +12,15 @@ const OS_LIST = [
   { id: 'linux',   label: 'Linux',   color: '#3fb950' },
 ];
 
+// Taiko excluded from interceptions (no interception support)
+const ALL_PLATFORMS = [
+  { id: 'playwright',  label: 'Playwright',  modes: ['extractor', 'interceptions'] },
+  { id: 'puppeteer',   label: 'Puppeteer',   modes: ['extractor', 'interceptions'] },
+  { id: 'selenium',    label: 'Selenium',    modes: ['extractor', 'interceptions'] },
+  { id: 'webdriverio', label: 'WebdriverIO', modes: ['extractor', 'interceptions'] },
+  { id: 'taiko',       label: 'Taiko',       modes: ['extractor'] },
+];
+
 const s = {
   page:         { padding: '28px', minHeight: '100vh', fontFamily: "'Segoe UI', Tahoma, sans-serif" },
   h1:           { fontSize: '22px', color: '#58a6ff', marginBottom: '6px' },
@@ -232,6 +241,7 @@ export default function Browsers() {
   const [available,     setAvailable]     = useState(null);  // { windows, linux } or null
   const [loadingAvail,  setLoadingAvail]  = useState(true);
   const [availError,    setAvailError]    = useState(null);
+  const [platformSel,   setPlatformSel]   = useState(new Set(['playwright', 'puppeteer', 'selenium', 'webdriverio', 'taiko']));
   const [submitting,    setSubmitting]    = useState(false);
   const [results,       setResults]       = useState([]);   // [{os, ok, jobId?, message}]
 
@@ -273,6 +283,26 @@ export default function Browsers() {
         .sort((a, b) => parseInt(b, 10) - parseInt(a, 10))
     : [];
 
+  // Platforms available for current run mode
+  const availablePlatforms = ALL_PLATFORMS.filter(p => p.modes.includes(runMode));
+
+  // When run mode changes, remove any platforms not valid for the new mode
+  useEffect(() => {
+    const validIds = new Set(ALL_PLATFORMS.filter(p => p.modes.includes(runMode)).map(p => p.id));
+    setPlatformSel(prev => {
+      const next = new Set([...prev].filter(id => validIds.has(id)));
+      return next.size !== prev.size ? next : prev;
+    });
+  }, [runMode]);
+
+  function togglePlatform(id) {
+    setPlatformSel(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   function toggleOS(id) {
     setSelectedOS(prev => {
       const next = new Set(prev);
@@ -299,7 +329,7 @@ export default function Browsers() {
   }
 
   const hasVersions = chromeSel.size > 0 || firefoxSel.size > 0;
-  const canRun = selectedOS.size > 0 && hasVersions && !submitting;
+  const canRun = selectedOS.size > 0 && hasVersions && platformSel.size > 0 && !submitting;
 
   async function handleSubmit() {
     if (!canRun) return;
@@ -323,7 +353,7 @@ export default function Browsers() {
         const res  = await fetch(`${API_URL}/jobs`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ platform: os, run_mode: runMode, browser_filter, version_list }),
+          body:    JSON.stringify({ platform: os, run_mode: runMode, browser_filter, version_list, frameworks: [...platformSel].join(',') }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -354,7 +384,7 @@ export default function Browsers() {
     <div style={s.page}>
       <h1 style={s.h1}>Run Browsers</h1>
       <p style={s.sub}>
-        Select a run mode, target OSes, and specific browser versions, then submit.
+        Select a run mode, target OSes, automation platforms, and browser versions, then submit.
         An ECS Fargate task launches per OS and writes results to S3.
       </p>
 
@@ -387,9 +417,32 @@ export default function Browsers() {
         </div>
       </div>
 
-      {/* 3. Browser Versions */}
+      {/* 3. Automation Platforms */}
       <div style={s.section}>
-        <div style={s.sectionTitle}>3. Browser Versions</div>
+        <div style={s.sectionTitle}>3. Automation Platforms</div>
+        <div style={{ marginBottom: '10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <button style={s.quickBtn} onClick={() => setPlatformSel(new Set(availablePlatforms.map(p => p.id)))}>Select All</button>
+          <button style={s.quickBtn} onClick={() => setPlatformSel(new Set())}>None</button>
+          <span style={{ fontSize: '11px', color: '#6e7681', alignSelf: 'center', marginLeft: '4px' }}>
+            {platformSel.size} / {availablePlatforms.length} selected
+          </span>
+        </div>
+        <div style={s.row}>
+          {availablePlatforms.map(p => {
+            const checked = platformSel.has(p.id);
+            return (
+              <div key={p.id} style={s.osCard(checked, '#a371f7')} onClick={() => togglePlatform(p.id)}>
+                <CheckboxTick checked={checked} color='#a371f7' />
+                <span style={s.osLabel(checked, '#a371f7')}>{p.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Browser Versions */}
+      <div style={s.section}>
+        <div style={s.sectionTitle}>4. Browser Versions</div>
 
         {loadingAvail && (
           <div style={s.loadingBox}>Loading available versions…</div>
@@ -419,9 +472,9 @@ export default function Browsers() {
         )}
       </div>
 
-      {/* 4. Submit */}
+      {/* 5. Submit */}
       <div style={s.section}>
-        <div style={s.sectionTitle}>4. Submit</div>
+        <div style={s.sectionTitle}>5. Submit</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <button style={s.btn(!canRun)} onClick={handleSubmit} disabled={!canRun}>
             {submitLabel}
@@ -431,6 +484,9 @@ export default function Browsers() {
           )}
           {selectedOS.size > 0 && !hasVersions && (
             <span style={s.hint}>Select at least one browser version</span>
+          )}
+          {selectedOS.size > 0 && hasVersions && platformSel.size === 0 && (
+            <span style={s.hint}>Select at least one automation platform</span>
           )}
         </div>
 

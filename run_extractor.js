@@ -353,126 +353,128 @@ async function buildTasks(done) {
     ? Object.values(JSON.parse(fs.readFileSync(EDGE_MANIFEST, 'utf8'))).filter(e => fs.existsSync(e.edgePath))
     : [];
 
+  // FRAMEWORKS env var: comma-separated list of frameworks to run.
+  // Recognised values: playwright, puppeteer, selenium, webdriverio, taiko
+  // Omit (or set to empty) to run all frameworks.
+  const fwFilter = process.env.FRAMEWORKS
+    ? new Set(process.env.FRAMEWORKS.split(',').map(s => s.trim().toLowerCase()))
+    : null;
+  const want = name => !fwFilter || fwFilter.has(name);
+
   function add(lbl, fn) {
     if (done.has(lbl)) { console.log(`[extractor] ${lbl}: already done, skipping`); return; }
     tasks.push(async () => { console.log(`[extractor] starting ${lbl}`); await fn(); });
   }
 
-  // ── Playwright bundled chromium ──
-  for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-    add(`playwright-chromium-bundled-${mode}`, () => runPlaywright(`playwright-chromium-bundled-${mode}`, chromium, { args: ['--no-sandbox'] }, headless));
-  }
-
-  // ── Playwright bundled firefox ──
-  for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-    add(`playwright-firefox-pw-bundled-${mode}`, () => runPlaywright(`playwright-firefox-pw-bundled-${mode}`, firefox, {}, headless));
-  }
-
-  // ── Playwright Chrome (all versions) ──
-  for (const b of chromes) {
-    const major = b.buildId.split('.')[0];
+  // ── Playwright ──
+  if (want('playwright')) {
     for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `playwright-chrome-${major}-${mode}`;
-      add(lbl, () => runPlaywright(lbl, chromium, { executablePath: b.executablePath, args: ['--no-sandbox'] }, headless));
+      add(`playwright-chromium-bundled-${mode}`, () => runPlaywright(`playwright-chromium-bundled-${mode}`, chromium, { args: ['--no-sandbox'] }, headless));
     }
-  }
-
-  // ── Playwright Edge channels ──
-  for (const { label, version, edgePath } of edgeChannels) {
-    const major = version.split('.')[0];
-    const channel = label === 'edge' ? 'msedge' : label === 'edge-beta' ? 'msedge-beta' : 'msedge-dev';
     for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `playwright-${label}-${major}-${mode}`;
-      add(lbl, () => runPlaywright(lbl, chromium, { channel, args: ['--no-sandbox'] }, headless));
+      add(`playwright-firefox-pw-bundled-${mode}`, () => runPlaywright(`playwright-firefox-pw-bundled-${mode}`, firefox, {}, headless));
     }
-  }
-
-  // ── Puppeteer Chrome (all versions) ──
-  for (const b of chromes) {
-    const major = b.buildId.split('.')[0];
-    for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `puppeteer-chrome-${major}-${mode}`;
-      add(lbl, () => runPuppeteerChrome(lbl, b.executablePath, headless));
-    }
-  }
-
-  // ── Puppeteer Firefox (all @puppeteer/browsers versions) ──
-  for (const b of ppFirefoxes) {
-    const major = b.buildId.replace(/^[^_]+_/, '').split('.')[0];
-    for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `puppeteer-firefox-${major}-${mode}`;
-      add(lbl, () => runPuppeteerFirefox(lbl, b.executablePath, headless));
-    }
-  }
-
-  // ── Puppeteer Edge channels ──
-  for (const { label, version, edgePath } of edgeChannels) {
-    const major = version.split('.')[0];
-    for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `puppeteer-${label}-${major}-${mode}`;
-      add(lbl, () => runPuppeteerChrome(lbl, edgePath, headless));
-    }
-  }
-
-  // ── Selenium Chrome (all versions with matching driver) ──
-  for (const b of chromes.filter(c => chromeDriverMap.has(c.buildId))) {
-    const major = b.buildId.split('.')[0];
-    const driverPath = chromeDriverMap.get(b.buildId);
-    for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `selenium-chrome-${major}-${mode}`;
-      add(lbl, () => runSeleniumChrome(lbl, b.executablePath, driverPath, headless));
-    }
-  }
-
-  // ── Selenium Firefox (all versions in FF_DIR) ──
-  if (fs.existsSync(FF_DIR)) {
-    const ffDirs = fs.readdirSync(FF_DIR)
-      .filter(d => fs.existsSync(path.join(FF_DIR, d, 'firefox.exe')))
-      .sort((a, b) => Number(a) - Number(b));
-    for (const major of ffDirs) {
-      const exe = path.join(FF_DIR, major, 'firefox.exe');
-      const gecko = geckoExeFor(major);
-      if (!fs.existsSync(gecko)) continue;
+    for (const b of chromes) {
+      const major = b.buildId.split('.')[0];
       for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-        const lbl = `selenium-firefox-${major}-${mode}`;
-        add(lbl, () => runSeleniumFirefox(lbl, exe, gecko, headless));
+        const lbl = `playwright-chrome-${major}-${mode}`;
+        add(lbl, () => runPlaywright(lbl, chromium, { executablePath: b.executablePath, args: ['--no-sandbox'] }, headless));
+      }
+    }
+    for (const { label, version, edgePath } of edgeChannels) {
+      const major = version.split('.')[0];
+      const channel = label === 'edge' ? 'msedge' : label === 'edge-beta' ? 'msedge-beta' : 'msedge-dev';
+      for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+        const lbl = `playwright-${label}-${major}-${mode}`;
+        add(lbl, () => runPlaywright(lbl, chromium, { channel, args: ['--no-sandbox'] }, headless));
       }
     }
   }
 
-  // ── Selenium Edge channels ──
-  for (const { label, version, edgePath } of edgeChannels) {
-    const major = version.split('.')[0];
-    for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `selenium-${label}-${major}-${mode}`;
-      add(lbl, () => runSeleniumEdge(lbl, edgePath, headless));
+  // ── Puppeteer ──
+  if (want('puppeteer')) {
+    for (const b of chromes) {
+      const major = b.buildId.split('.')[0];
+      for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+        const lbl = `puppeteer-chrome-${major}-${mode}`;
+        add(lbl, () => runPuppeteerChrome(lbl, b.executablePath, headless));
+      }
     }
-  }
-
-  // ── WebdriverIO Chrome (all versions with matching driver) ──
-  for (const b of chromes.filter(c => chromeDriverMap.has(c.buildId))) {
-    const major = b.buildId.split('.')[0];
-    const driverPath = chromeDriverMap.get(b.buildId);
-    for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-      const lbl = `webdriverio-chrome-${major}-${mode}`;
-      add(lbl, () => runWebdriverIOChrome(lbl, b.executablePath, driverPath, headless));
-    }
-  }
-
-  // ── WebdriverIO Firefox (@puppeteer/browsers versions + latest geckodriver) ──
-  const latestGecko = path.join(CACHE_DIR, 'geckodriver', 'latest', 'geckodriver.exe');
-  if (fs.existsSync(latestGecko)) {
     for (const b of ppFirefoxes) {
       const major = b.buildId.replace(/^[^_]+_/, '').split('.')[0];
       for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
-        const lbl = `webdriverio-firefox-${major}-${mode}`;
-        add(lbl, () => runWebdriverIOFirefox(lbl, b.executablePath, latestGecko, headless));
+        const lbl = `puppeteer-firefox-${major}-${mode}`;
+        add(lbl, () => runPuppeteerFirefox(lbl, b.executablePath, headless));
+      }
+    }
+    for (const { label, version, edgePath } of edgeChannels) {
+      const major = version.split('.')[0];
+      for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+        const lbl = `puppeteer-${label}-${major}-${mode}`;
+        add(lbl, () => runPuppeteerChrome(lbl, edgePath, headless));
+      }
+    }
+  }
+
+  // ── Selenium ──
+  if (want('selenium')) {
+    for (const b of chromes.filter(c => chromeDriverMap.has(c.buildId))) {
+      const major = b.buildId.split('.')[0];
+      const driverPath = chromeDriverMap.get(b.buildId);
+      for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+        const lbl = `selenium-chrome-${major}-${mode}`;
+        add(lbl, () => runSeleniumChrome(lbl, b.executablePath, driverPath, headless));
+      }
+    }
+    if (fs.existsSync(FF_DIR)) {
+      const ffDirs = fs.readdirSync(FF_DIR)
+        .filter(d => fs.existsSync(path.join(FF_DIR, d, 'firefox.exe')))
+        .sort((a, b) => Number(a) - Number(b));
+      for (const major of ffDirs) {
+        const exe = path.join(FF_DIR, major, 'firefox.exe');
+        const gecko = geckoExeFor(major);
+        if (!fs.existsSync(gecko)) continue;
+        for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+          const lbl = `selenium-firefox-${major}-${mode}`;
+          add(lbl, () => runSeleniumFirefox(lbl, exe, gecko, headless));
+        }
+      }
+    }
+    for (const { label, version, edgePath } of edgeChannels) {
+      const major = version.split('.')[0];
+      for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+        const lbl = `selenium-${label}-${major}-${mode}`;
+        add(lbl, () => runSeleniumEdge(lbl, edgePath, headless));
+      }
+    }
+  }
+
+  // ── WebdriverIO ──
+  if (want('webdriverio')) {
+    for (const b of chromes.filter(c => chromeDriverMap.has(c.buildId))) {
+      const major = b.buildId.split('.')[0];
+      const driverPath = chromeDriverMap.get(b.buildId);
+      for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+        const lbl = `webdriverio-chrome-${major}-${mode}`;
+        add(lbl, () => runWebdriverIOChrome(lbl, b.executablePath, driverPath, headless));
+      }
+    }
+    const latestGecko = path.join(CACHE_DIR, 'geckodriver', 'latest', 'geckodriver.exe');
+    if (fs.existsSync(latestGecko)) {
+      for (const b of ppFirefoxes) {
+        const major = b.buildId.replace(/^[^_]+_/, '').split('.')[0];
+        for (const [headless, mode] of [[true,'headless'],[false,'headfull']]) {
+          const lbl = `webdriverio-firefox-${major}-${mode}`;
+          add(lbl, () => runWebdriverIOFirefox(lbl, b.executablePath, latestGecko, headless));
+        }
       }
     }
   }
 
   // ── Taiko Chrome (sequential — wrapped as one task) ──
-  tasks.push(() => runAllTaiko(chromes.map(b => ({ major: b.buildId.split('.')[0], executablePath: b.executablePath })), done));
+  if (want('taiko')) {
+    tasks.push(() => runAllTaiko(chromes.map(b => ({ major: b.buildId.split('.')[0], executablePath: b.executablePath })), done));
+  }
 
   return tasks;
 }

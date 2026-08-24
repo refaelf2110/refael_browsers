@@ -51,7 +51,7 @@ exports.handler = async (event) => {
       continue;
     }
 
-    const { jobId, platform, run_mode, browser_filter, version_list } = message;
+    const { jobId, platform, run_mode, browser_filter, version_list, frameworks } = message;
     console.log(`Processing job ${jobId}: platform=${platform} run_mode=${run_mode}`);
 
     const taskDefinition = platform === 'windows' ? WINDOWS_TASK_DEF : LINUX_TASK_DEF;
@@ -69,6 +69,10 @@ exports.handler = async (event) => {
       }
     } else {
       browserEnv = getBrowserSyncEnv(run_mode);
+    }
+
+    if (frameworks !== undefined) {
+      browserEnv.push({ name: 'FRAMEWORKS', value: frameworks });
     }
 
     const result = await ecs.send(new RunTaskCommand({
