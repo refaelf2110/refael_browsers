@@ -229,15 +229,19 @@ async function getBrowsersAvailable() {
       const kind  = parts[0];
       const folder = parts[1] || '';
 
-      if (kind === 'chrome' || kind === 'linux/chrome') {
-        // folder: win64-131.0.6778.87
-        const m = folder.match(/^win64-(.+)$/);
+      if (kind === 'chrome') {
+        // folder: win64-131.0.6778.87  or  linux64-131.0.6778.87
+        const m = folder.match(/^(?:win64|linux64)-(.+)$/);
         if (m) chromeSet.add(m[1]);
       } else if (kind === 'chromedriver') {
         // skip — implied by chrome
       } else if (kind === 'firefox') {
-        // folder: major version number only (numeric)
-        if (/^\d+$/.test(folder)) firefoxSet.add(folder);
+        // Windows folder: plain major number e.g. "135"
+        // Linux folder:   "linux-135.0" (puppeteer format)
+        const mWin   = folder.match(/^(\d+)$/);
+        const mLinux = folder.match(/^linux-(\d+)\./);
+        const major  = (mWin || mLinux)?.[1];
+        if (major) firefoxSet.add(major);
       }
     }
 
