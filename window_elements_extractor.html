@@ -96,34 +96,34 @@ function make_uniques_array (a, b)
 
 function make_final_array (object_str)
 {
-	var vars_get_own_prprty = [];
+	// Traverse the full prototype chain so we capture inherited API properties
+	// (e.g. Navigator.prototype.userAgent, Screen.prototype.width, etc.) which are
+	// non-enumerable and not returned by Object.getOwnPropertyNames on the instance.
+	// Stop before Object.prototype to avoid emitting hasOwnProperty/toString for
+	// every object — those are identical across all browsers.
+	var seen = {};
 	try {
-		vars_get_own_prprty = Object.getOwnPropertyNames(eval(object_str));
-	}
-	catch(e){};
-	var vars_for_loop = [];
-	try {
-		vars_for_loop = object_to_array (eval(object_str));
-	}
-	catch(e){};	
-	if (vars_get_own_prprty.length > 0 && vars_for_loop.length > 0)
-	{
-		vars_array = make_uniques_array(vars_get_own_prprty, vars_for_loop)
-	}
-	else if (vars_get_own_prprty.length > 0)
-	{
-		vars_array = vars_get_own_prprty;
-	}
-	else if (vars_for_loop.length > 0)
-	{
-		vars_array = vars_for_loop;
-	}
-	else
-	{
-		vars_array = [];
-	}
-	
-	return array_to_object(vars_array);
+		var _obj = eval(object_str);
+		var _proto = _obj;
+		var _depth = 0;
+		while (_proto !== null && _proto !== undefined && _proto !== Object.prototype && _depth < 10) {
+			try {
+				var _names = Object.getOwnPropertyNames(_proto);
+				for (var _ni = 0; _ni < _names.length; _ni++) {
+					seen[_names[_ni]] = '';
+				}
+			} catch(_e) {}
+			try {
+				_proto = Object.getPrototypeOf(_proto);
+			} catch(_e) { break; }
+			_depth++;
+		}
+		// Also capture enumerable inherited properties (proxy objects, polyfills, etc.)
+		try {
+			for (var _key in _obj) { seen[_key] = ''; }
+		} catch(_e) {}
+	} catch(_e) {}
+	return seen;
 }
 
 var get_vars_depth = 0;
@@ -148,6 +148,8 @@ var _INTERNAL_VARS = new Set([
   'object_full_path','vars_array','nativenes','nativenes2',
   'getter_nativenes','getter','double_to_string','func',
   'a','j','k',
+  // make_final_array locals (var-declared but listed defensively)
+  '_obj','_proto','_depth','_names','_ni','_key','_e',
 ]);
 
 // Function to detect repeating patterns in object paths to prevent infinite loops

@@ -237,6 +237,7 @@ resource "aws_lambda_function" "refael_results_api" {
       ATHENA_DATABASE        = aws_glue_catalog_database.refael_browser_matrix.name
       ATHENA_RESULTS_BUCKET  = "s3://${aws_s3_bucket.refael_results.id}/${var.athena_results_prefix}"
       BROWSERS_CACHE_BUCKET  = aws_s3_bucket.refael_browsers_cache.id
+      RESULTS_BUCKET         = aws_s3_bucket.refael_results.id
     }
   }
 

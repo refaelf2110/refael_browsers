@@ -103,9 +103,9 @@ export default function CanIRun() {
           <p style={{ fontSize: '13px', color: '#8b949e', marginBottom: '14px' }}>
             {functions.length > 0
               ? `${functions.length} function(s) across ${browsers.length} browser(s).`
-              : browsers.length === 0
-                ? 'No extractor data found in the database. Run an "extractor" job first to collect browser window properties.'
-                : `No functions matching "${query}" found.`}
+              : query.trim()
+                ? `No functions matching "${query}" found.`
+                : 'No extractor data found. Run an "extractor" job first to collect browser window properties.'}
           </p>
           {functions.length > 0 && (
             <div style={{ overflowX: 'auto' }}>

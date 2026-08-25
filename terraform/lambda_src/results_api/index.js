@@ -7,7 +7,7 @@ const {
   GetQueryResultsCommand,
 } = require('@aws-sdk/client-athena');
 
-const { S3Client, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { S3Client, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const athena   = new AthenaClient({});
 const DATABASE = process.env.ATHENA_DATABASE;
@@ -152,11 +152,11 @@ async function getExtractorDiff(queryParams) {
 }
 
 async function getExtractorFunctions(queryParams) {
-  const q   = queryParams?.q || '';
-  const pat = q ? q.replace(/'/g, "''") : '';
+  const q      = queryParams?.q || '';
+  const pat    = q ? q.replace(/'/g, "''").toLowerCase() : '';
   const sql = pat
     ? `SELECT browser_label, name, value FROM window_elements
-       WHERE type LIKE '%function%' AND name LIKE '%${pat}%'
+       WHERE type LIKE '%function%' AND LOWER(name) LIKE '%${pat}%'
        ORDER BY name, browser_label`
     : `SELECT browser_label, name, value FROM window_elements
        WHERE type LIKE '%function%'
@@ -178,6 +178,24 @@ async function getExtractorFunctions(queryParams) {
       functions: [...funcMap.values()].sort((a, b) => a.name.localeCompare(b.name)),
     },
   };
+}
+
+async function getDashboardCombined() {
+  const bucket = process.env.RESULTS_BUCKET;
+  if (!bucket) return { statusCode: 500, body: { error: 'RESULTS_BUCKET not configured' } };
+
+  try {
+    const resp = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: 'dashboard/combined.json' }));
+    const chunks = [];
+    for await (const chunk of resp.Body) chunks.push(chunk);
+    const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return { statusCode: 200, body: data };
+  } catch (e) {
+    if (e.name === 'NoSuchKey') {
+      return { statusCode: 404, body: { error: 'No combined dashboard yet. Run a detection job first.' } };
+    }
+    throw e;
+  }
 }
 
 async function getBrowsersAvailable() {
@@ -277,6 +295,7 @@ exports.handler = async (event) => {
     else if (method === 'GET' && path === '/extractor/browsers')             result = await getExtractorBrowsers();
     else if (method === 'GET' && path === '/extractor/diff')                 result = await getExtractorDiff(query);
     else if (method === 'GET' && path === '/extractor/functions')            result = await getExtractorFunctions(query);
+    else if (method === 'GET' && path === '/dashboard/combined')             result = await getDashboardCombined();
     else if (method === 'GET' && path === '/browsers/available')             result = await getBrowsersAvailable();
     else result = { statusCode: 404, body: { error: 'Not found' } };
 

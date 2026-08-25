@@ -520,11 +520,80 @@ async function uploadToS3() {
   console.log('[s3] Upload complete.');
 }
 
+/**
+ * After a detection run completes, merge its results into a static
+ * `dashboard/combined.json` in S3. Each entry is keyed by
+ * `${platform}|${framework}|${label}|${major}|${mode}` so that results
+ * from Windows and Linux containers are kept separately and new runs
+ * overwrite only the entries they produced.
+ */
+async function generateCombinedDashboard(runId) {
+  const bucket = process.env.RESULTS_BUCKET;
+  if (!bucket) { console.log('[combined] RESULTS_BUCKET not set — skipping'); return; }
+
+  const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
+  const s3 = new S3Client({});
+  const S3_KEY = 'dashboard/combined.json';
+
+  // Load current run from SQLite
+  const run = getRunById(runId);
+  if (!run) { console.log(`[combined] Run ${runId} not found in db`); return; }
+
+  const platform   = run.platform || process.platform || '';
+  const completedAt = run.completed_at;
+
+  // Download existing combined.json (may not exist on first run)
+  let existing = { generated_at: '', browsers: [] };
+  try {
+    const resp = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: S3_KEY }));
+    const chunks = [];
+    for await (const chunk of resp.Body) chunks.push(chunk);
+    existing = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch (e) {
+    if (e.name !== 'NoSuchKey') console.log(`[combined] Could not load existing: ${e.message}`);
+  }
+
+  // Build merge map from existing entries
+  const map = new Map((existing.browsers || []).map(b => [
+    `${b.platform}|${b.framework}|${b.label}|${b.major}|${b.mode}`, b,
+  ]));
+
+  // Overwrite entries for the current run's platform
+  for (const r of (run.results || [])) {
+    const key = `${platform}|${r.framework}|${r.label}|${r.major}|${r.mode}`;
+    map.set(key, {
+      platform,
+      framework:    r.framework,
+      label:        r.label,
+      major:        r.major,
+      mode:         r.mode,
+      allReasons:   r.allReasons || [],
+      error:        r.error || null,
+      run_id:       runId,
+      completed_at: completedAt,
+    });
+  }
+
+  const combined = {
+    generated_at: new Date().toISOString(),
+    browsers:     [...map.values()],
+  };
+
+  await s3.send(new PutObjectCommand({
+    Bucket:      bucket,
+    Key:         S3_KEY,
+    Body:        JSON.stringify(combined),
+    ContentType: 'application/json',
+  }));
+
+  console.log(`[combined] Wrote dashboard/combined.json — ${combined.browsers.length} entries`);
+}
+
 module.exports = {
   saveRun, getLatestRun, getRunById, getAllRuns,
   saveWindowElements, getWindowElementBrowsers, getWindowElements, searchWindowFunctions,
   createInterceptionSession, finalizeInterceptionSession, saveInterceptions,
   getInterceptionSessions, getInterceptionSession, getInterceptions,
   getInterceptionActions, getTopInterceptedFunctions,
-  uploadToS3,
+  uploadToS3, generateCombinedDashboard,
 };

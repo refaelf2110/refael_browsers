@@ -35,3 +35,7 @@ export function getExtractorDiff(a, b) {
 export function getExtractorFunctions(q) {
   return apiFetch(`/extractor/functions?q=${encodeURIComponent(q)}`);
 }
+
+export function getCombinedDashboard() {
+  return apiFetch('/dashboard/combined');
+}

@@ -28,6 +28,12 @@ function logoUrl(label) {
   return '';
 }
 
+function osLogoUrl(platform) {
+  if (platform === 'win32') return 'https://cdn.simpleicons.org/windows/0078d4';
+  if (platform === 'linux') return 'https://cdn.simpleicons.org/linux/fcc624';
+  return '';
+}
+
 function sortRows(rows) {
   return [...rows].sort((a, b) => {
     const am = Number(a.major), bm = Number(b.major);
@@ -66,9 +72,8 @@ function detailText(r, posReasons) {
 }
 
 function titleText(r, posReasons) {
-  if (r.error) return r.error;
-  if (posReasons.length === 0) return 'Not detected';
-  return posReasons.join(', ');
+  const base = r.error ? r.error : (posReasons.length === 0 ? 'Not detected' : posReasons.join(', '));
+  return r.completed_at ? `${base}\n${r.completed_at}` : base;
 }
 
 const cellColors = {
@@ -192,6 +197,7 @@ export default function RunView({ run, error, loading }) {
                 const pos = getPositiveReasons(r, excludedSet);
                 const cls = cellClass(r, pos);
                 const url = logoUrl(r.label);
+                const cardOsUrl = osLogoUrl(r.platform);
                 return (
                   <div
                     key={i}
@@ -224,6 +230,16 @@ export default function RunView({ run, error, loading }) {
                           width={14}
                           height={14}
                           style={{ flexShrink: 0, verticalAlign: 'middle' }}
+                          onError={e => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      )}
+                      {cardOsUrl && (
+                        <img
+                          src={cardOsUrl}
+                          alt=""
+                          width={12}
+                          height={12}
+                          style={{ flexShrink: 0, verticalAlign: 'middle', opacity: 0.85 }}
                           onError={e => { e.currentTarget.style.display = 'none'; }}
                         />
                       )}

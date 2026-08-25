@@ -38,7 +38,7 @@ const { spawn } = require('child_process');
 const fs   = require('fs');
 const path = require('path');
 const { generateHTML }                = require('./generate_html');
-const { saveRun, saveWindowElements } = require('./db');
+const { saveRun, saveWindowElements, uploadToS3, generateCombinedDashboard } = require('./db');
 
 const CACHE_DIR     = 'C:\\browsers';
 const FF_DIR        = path.join(CACHE_DIR, 'firefox');
@@ -862,10 +862,11 @@ async function runTestCafeChromeTest(major, chromePath, headless) {
 
 function generateResultsHTML(elapsed, runLabel) {
   const completedAt = new Date().toISOString();
-  saveRun(runLabel.toLowerCase(), elapsed, results);
+  const runId = saveRun(runLabel.toLowerCase(), elapsed, results, process.platform);
   const html = generateHTML(results, elapsed, runLabel, completedAt);
   fs.writeFileSync(RESULTS_FILE, html, 'utf8');
   console.log(`\nResults page: ${RESULTS_FILE}`);
+  return runId;
 }
 
 
@@ -1349,7 +1350,10 @@ async function run() {
   await withConcurrency(tasks, CONCURRENCY);
   const elapsed = formatElapsed(Date.now() - startMs);
   console.log(`\nTotal time: ${elapsed}`);
-  generateResultsHTML(elapsed, 'Mini');
+  const runId = generateResultsHTML(elapsed, 'Mini');
+  await generateCombinedDashboard(runId);
+  await uploadToS3();
+  process.exit(0);
 }
 
 // ── extractor-mini: 2 versions (oldest + latest) per framework ───────────────

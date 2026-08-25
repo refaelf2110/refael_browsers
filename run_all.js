@@ -45,7 +45,7 @@ const { spawn } = require('child_process');
 const fs   = require('fs');
 const path = require('path');
 const { generateHTML } = require('./generate_html');
-const { saveRun, uploadToS3 } = require('./db');
+const { saveRun, uploadToS3, generateCombinedDashboard } = require('./db');
 
 const CACHE_DIR     = isWin ? 'C:\\browsers' : '/browsers';
 const FF_DIR        = path.join(CACHE_DIR, 'firefox');
@@ -872,10 +872,11 @@ async function runTestCafeChromeTest(major, chromePath, headless) {
 
 function generateResultsHTML(elapsed, runLabel) {
   const completedAt = new Date().toISOString();
-  saveRun(runLabel.toLowerCase(), elapsed, results);
+  const runId = saveRun(runLabel.toLowerCase(), elapsed, results, process.platform);
   const html = generateHTML(results, elapsed, runLabel, completedAt);
   fs.writeFileSync(RESULTS_FILE, html, 'utf8');
   console.log(`\nResults page: ${RESULTS_FILE}`);
+  return runId;
 }
 
 // ── build task list (ALL versions) ────────────────────────────────────────────
@@ -1043,7 +1044,8 @@ async function run() {
   await withConcurrency(tasks, CONCURRENCY);
   const elapsed = formatElapsed(Date.now() - startMs);
   console.log(`\nTotal time: ${elapsed}`);
-  generateResultsHTML(elapsed, 'Full');
+  const runId = generateResultsHTML(elapsed, 'Full');
+  await generateCombinedDashboard(runId);
   await uploadToS3();
   process.exit(0);
 }
