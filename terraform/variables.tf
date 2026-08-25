@@ -89,9 +89,9 @@ variable "ecs_linux_memory" {
 }
 
 variable "ecs_windows_cpu" {
-  description = "CPU units for Windows ECS task"
+  description = "CPU units for Windows ECS task (Windows Fargate max is 4 vCPU)"
   type        = number
-  default     = 8192
+  default     = 4096
 }
 
 variable "ecs_windows_memory" {
