@@ -39,3 +39,7 @@ export function getExtractorFunctions(q) {
 export function getCombinedDashboard() {
   return apiFetch('/dashboard/combined');
 }
+
+export function getBrowsersNew() {
+  return apiFetch('/browsers/new');
+}

@@ -9,6 +9,7 @@ import CanIRun from './pages/CanIRun';
 import Interceptions from './pages/Interceptions';
 import InterceptionDetail from './pages/InterceptionDetail';
 import Browsers from './pages/Browsers';
+import BrowserDownload from './pages/BrowserDownload';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/interceptions" element={<Interceptions />} />
         <Route path="/interceptions/:id" element={<InterceptionDetail />} />
         <Route path="/browsers" element={<Browsers />} />
+        <Route path="/browsers/new" element={<BrowserDownload />} />
       </Routes>
     </BrowserRouter>
   );

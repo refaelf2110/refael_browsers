@@ -179,6 +179,64 @@ async function getExtractorFunctions(queryParams) {
   };
 }
 
+async function getBrowsersNew() {
+  // Fetch upstream Chrome versions (one latest patch per major)
+  const chromeResp = await fetch('https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json');
+  if (!chromeResp.ok) throw new Error('Failed to fetch Chrome versions from upstream');
+  const chromeData = await chromeResp.json();
+
+  const majorMap = new Map();
+  for (const v of chromeData.versions) {
+    const major = parseInt(v.version.split('.')[0], 10);
+    if (!majorMap.has(major)) {
+      majorMap.set(major, v.version);
+    } else {
+      const ex = majorMap.get(major).split('.').map(Number);
+      const cu = v.version.split('.').map(Number);
+      for (let i = 0; i < 4; i++) {
+        if ((cu[i] || 0) > (ex[i] || 0)) { majorMap.set(major, v.version); break; }
+        if ((cu[i] || 0) < (ex[i] || 0)) break;
+      }
+    }
+  }
+  const allChrome = [...majorMap.values()].sort((a, b) => {
+    const ap = a.split('.').map(Number), bp = b.split('.').map(Number);
+    for (let i = 0; i < 4; i++) { const d = (bp[i]||0)-(ap[i]||0); if (d) return d; }
+    return 0;
+  });
+
+  // Fetch upstream Firefox versions (all majors >= 86)
+  const ffResp = await fetch('https://product-details.mozilla.org/1.0/firefox.json');
+  if (!ffResp.ok) throw new Error('Failed to fetch Firefox versions from upstream');
+  const ffData = await ffResp.json();
+  const ffMajors = new Set();
+  for (const rel of Object.values(ffData.releases)) {
+    if (rel.product === 'firefox' && rel.version) {
+      const major = parseInt(rel.version.split('.')[0], 10);
+      if (major >= 86) ffMajors.add(String(major));
+    }
+  }
+  const allFirefox = [...ffMajors].sort((a, b) => parseInt(b, 10) - parseInt(a, 10));
+
+  // Get what's already cached in S3
+  const cachedResult = await getBrowsersAvailable();
+  const cached = cachedResult.body;
+
+  const chromeMajor = v => parseInt(v.split('.')[0], 10);
+
+  const result = {};
+  for (const os of ['windows', 'linux']) {
+    const cachedChromeMajors = new Set((cached[os]?.chrome || []).map(chromeMajor));
+    const cachedFirefoxMajors = new Set((cached[os]?.firefox || []).map(v => String(parseInt(v, 10))));
+    result[os] = {
+      chrome:  { cached: cached[os]?.chrome  || [], new: allChrome.filter(v => !cachedChromeMajors.has(chromeMajor(v))) },
+      firefox: { cached: cached[os]?.firefox || [], new: allFirefox.filter(v => !cachedFirefoxMajors.has(v)) },
+    };
+  }
+
+  return { statusCode: 200, body: result };
+}
+
 async function getDashboardCombined() {
   const bucket = process.env.RESULTS_BUCKET;
   if (!bucket) return { statusCode: 500, body: { error: 'RESULTS_BUCKET not configured' } };
@@ -296,6 +354,7 @@ exports.handler = async (event) => {
     else if (method === 'GET' && path === '/extractor/functions')            result = await getExtractorFunctions(query);
     else if (method === 'GET' && path === '/dashboard/combined')             result = await getDashboardCombined();
     else if (method === 'GET' && path === '/browsers/available')             result = await getBrowsersAvailable();
+    else if (method === 'GET' && path === '/browsers/new')                   result = await getBrowsersNew();
     else result = { statusCode: 404, body: { error: 'Not found' } };
 
     return {

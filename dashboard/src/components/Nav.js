@@ -50,6 +50,7 @@ export default function Nav() {
       <NavLink to="/canirun">Can I Run</NavLink>
       <NavLink to="/interceptions" color="#f0883e">Interceptions</NavLink>
       <NavLink to="/browsers" color="#3fb950">Run Browsers</NavLink>
+      <NavLink to="/browsers/new" color="#3fb950">New Browsers</NavLink>
     </nav>
   );
 }
