@@ -1,10 +1,10 @@
 # ── S3 Bucket: refael-browsers-cache ─────────────────────────────────────────
 
 resource "aws_s3_bucket" "refael_browsers_cache" {
-  bucket = "refael-browsers-cache"
+  bucket = "refael-browsers-cache-993942172925"
 
   tags = {
-    Name = "refael-browsers-cache"
+    Name = "refael-browsers-cache-993942172925"
   }
 }
 
@@ -47,10 +47,10 @@ resource "aws_s3_object" "refael_browsers_cache_macos_prefix" {
 # ── S3 Bucket: refael-results ─────────────────────────────────────────────────
 
 resource "aws_s3_bucket" "refael_results" {
-  bucket = "refael-results"
+  bucket = "refael-results-993942172925"
 
   tags = {
-    Name = "refael-results"
+    Name = "refael-results-993942172925"
   }
 }
 

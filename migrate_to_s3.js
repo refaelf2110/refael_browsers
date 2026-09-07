@@ -12,7 +12,7 @@
  * Prerequisites:
  *   npm install @dsnp/parquetjs @aws-sdk/client-s3
  *
- * AWS credentials are read from the "terraform" profile (~/.aws/credentials).
+ * AWS credentials are read from the "llm" profile (~/.aws/credentials).
  */
 
 const path    = require('path');
@@ -26,9 +26,9 @@ const { fromIni } = require('@aws-sdk/credential-providers');
 // ── Config ─────────────────────────────────────────────────────────────────────
 
 const DB_PATH     = path.join(__dirname, 'browser-cache', 'results.db');
-const S3_BUCKET   = 'refael-results';
+const S3_BUCKET   = 'refael-results-993942172925';
 const AWS_REGION  = 'us-east-1';
-const AWS_PROFILE = 'terraform';
+const AWS_PROFILE = 'llm';
 
 const s3 = new S3Client({
   region: AWS_REGION,

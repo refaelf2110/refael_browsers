@@ -1,11 +1,9 @@
 # ── Amplify App ───────────────────────────────────────────────────────────────
-# GitHub OAuth must be connected manually in the AWS Console after first apply.
-# The resource structure is set up here; Amplify will prompt for OAuth on first visit.
 
 resource "aws_amplify_app" "refael_dashboard" {
   name         = "refael-dashboard"
-  repository   = var.github_repo
-  access_token = var.github_access_token
+  repository   = var.gitlab_repo
+  access_token = var.gitlab_access_token
 
   # No build spec yet — React app does not exist yet.
   # Amplify will detect a React app automatically once code is pushed.

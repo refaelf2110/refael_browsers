@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "aws_profile" {
   description = "AWS CLI profile to use"
   type        = string
-  default     = "terraform"
+  default     = "llm"
 }
 
 variable "project" {
@@ -40,20 +40,20 @@ variable "availability_zones" {
   default     = ["us-east-1a", "us-east-1b"]
 }
 
-variable "github_repo" {
-  description = "GitHub repository URL for Amplify"
+variable "gitlab_repo" {
+  description = "GitLab repository URL for Amplify"
   type        = string
-  default     = "https://github.com/refaelf2110/refael_browsers"
+  default     = "https://gitlab.com/ct-dev/crossbrowser_testing/automated-browsers-analysis"
 }
 
-variable "github_access_token" {
-  description = "GitHub personal access token for Amplify to connect to the repo"
+variable "gitlab_access_token" {
+  description = "GitLab personal access token for Amplify to connect to the repo"
   type        = string
   sensitive   = true
 }
 
 variable "amplify_branch" {
-  description = "GitHub branch for Amplify"
+  description = "GitLab branch for Amplify"
   type        = string
   default     = "main"
 }
