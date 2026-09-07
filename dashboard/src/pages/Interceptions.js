@@ -73,7 +73,7 @@ export default function Interceptions() {
                 <td style={{ ...tdStyle, textAlign: 'right' }}>{s.action_count}</td>
                 <td style={{ ...tdStyle, textAlign: 'right' }}>{s.call_count}</td>
                 <td style={tdStyle}>
-                  <Link to={`/interceptions/${s.id}`}>/interceptions/{s.id}</Link>
+                  <Link to={`/interceptions/${s.public_id || s.id}`}>/interceptions/{s.public_id || s.id}</Link>
                 </td>
               </tr>
             ))}

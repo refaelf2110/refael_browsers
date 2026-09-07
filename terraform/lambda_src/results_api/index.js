@@ -98,16 +98,16 @@ async function getInterceptions() {
 }
 
 async function getInterceptionById(id) {
-  if (!/^\d+$/.test(id)) return { statusCode: 400, body: { error: 'Invalid id' } };
+  if (!/^[a-zA-Z0-9\-]+$/.test(id)) return { statusCode: 400, body: { error: 'Invalid id' } };
 
   const [session] = await runQuery(
-    `SELECT * FROM interception_sessions WHERE id = '${id}' LIMIT 1`
+    `SELECT * FROM interception_sessions WHERE public_id = '${id}' OR (public_id IS NULL AND CAST(id AS TEXT) = '${id}') LIMIT 1`
   );
-  if (!session) return { statusCode: 404, body: { error: `Session #${id} not found` } };
+  if (!session) return { statusCode: 404, body: { error: `Session ${id} not found` } };
 
   const { action, fn, limit = '500', offset = '0' } = {};
   const calls = await runQuery(
-    `SELECT * FROM interceptions WHERE session_id = '${id}' ORDER BY seq LIMIT 500`
+    `SELECT * FROM interceptions WHERE session_id = '${session.id}' ORDER BY seq LIMIT 500`
   );
 
   return { statusCode: 200, body: { session, calls } };

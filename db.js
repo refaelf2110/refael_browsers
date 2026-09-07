@@ -47,6 +47,7 @@ function getDb() {
 
       CREATE TABLE IF NOT EXISTS interception_sessions (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        public_id     TEXT    UNIQUE,
         framework     TEXT    NOT NULL,
         browser_label TEXT    NOT NULL,
         started_at    TEXT    NOT NULL,
@@ -81,6 +82,7 @@ function getDb() {
       'ALTER TABLE interceptions ADD COLUMN return_val     TEXT',
       'ALTER TABLE interceptions ADD COLUMN is_constructor INTEGER DEFAULT 0',
       'ALTER TABLE interceptions ADD COLUMN duration_ms    REAL    DEFAULT 0',
+      'ALTER TABLE interception_sessions ADD COLUMN public_id TEXT',
     ];
     for (const sql of newCols) {
       try { _db.exec(sql); } catch (_e) { /* already exists */ }
@@ -301,10 +303,11 @@ function searchWindowFunctions(namePattern) {
 /** Create a new interception session and return its id. */
 function createInterceptionSession(framework, browserLabel) {
   const db = getDb();
+  const publicId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const { lastInsertRowid } = db.prepare(
-    'INSERT INTO interception_sessions (framework, browser_label, started_at) VALUES (?, ?, ?)'
-  ).run(framework, browserLabel, new Date().toISOString());
-  console.log(`[interceptions] Session #${lastInsertRowid} started — ${browserLabel}`);
+    'INSERT INTO interception_sessions (public_id, framework, browser_label, started_at) VALUES (?, ?, ?, ?)'
+  ).run(publicId, framework, browserLabel, new Date().toISOString());
+  console.log(`[interceptions] Session #${lastInsertRowid} (${publicId}) started — ${browserLabel}`);
   return Number(lastInsertRowid);
 }
 
