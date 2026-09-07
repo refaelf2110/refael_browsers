@@ -147,7 +147,7 @@ export default function BrowserDownload() {
   const [data,       setData]       = useState(null);
   const [error,      setError]      = useState(null);
   const [loading,    setLoading]    = useState(true);
-  const [selectedOS, setSelectedOS] = useState(new Set(['windows', 'linux']));
+  const [selectedOS, setSelectedOS] = useState(new Set());
   const [chromeSel,  setChromeSel]  = useState(new Set());
   const [firefoxSel, setFirefoxSel] = useState(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -256,7 +256,7 @@ export default function BrowserDownload() {
           <div style={s.section}>
             <div style={s.sectionTitle}>Chrome</div>
             <BrowserCard
-              title="Chrome for Testing"
+              title="Chrome"
               osVersions={chromeByOS}
               selected={chromeSel}
               onSelect={setChromeSel}

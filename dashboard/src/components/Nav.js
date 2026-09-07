@@ -19,9 +19,9 @@ const logoStyle = {
   marginRight: '8px',
 };
 
-function NavLink({ to, children, color }) {
+function NavLink({ to, children, color, exact = false }) {
   const location = useLocation();
-  const active = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+  const active = location.pathname === to || (!exact && to !== '/' && location.pathname.startsWith(to));
   return (
     <Link
       to={to}
@@ -49,8 +49,8 @@ export default function Nav() {
       <NavLink to="/diff">Property Diff</NavLink>
       <NavLink to="/canirun">Can I Run</NavLink>
       <NavLink to="/interceptions" color="#f0883e">Interceptions</NavLink>
-      <NavLink to="/browsers" color="#3fb950">Run Browsers</NavLink>
-      <NavLink to="/browsers/new" color="#3fb950">New Browsers</NavLink>
+      <NavLink to="/browsers" color="#3fb950" exact>Run Browsers</NavLink>
+      <NavLink to="/browsers/new" color="#3fb950">Download</NavLink>
     </nav>
   );
 }
