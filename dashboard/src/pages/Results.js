@@ -74,6 +74,7 @@ function RunLink({ run }) {
 export default function Results() {
   const [runs, setRuns] = useState(null);
   const [error, setError] = useState(null);
+  const [hoveredId, setHoveredId] = useState(null);
 
   useEffect(() => {
     getRuns()
@@ -113,17 +114,9 @@ export default function Results() {
             {runs.map(r => (
               <tr
                 key={r.id}
-                style={{ cursor: 'default' }}
-                onMouseEnter={e => {
-                  Array.from(e.currentTarget.cells).forEach(td => {
-                    td.style.background = '#161b22';
-                  });
-                }}
-                onMouseLeave={e => {
-                  Array.from(e.currentTarget.cells).forEach(td => {
-                    td.style.background = 'transparent';
-                  });
-                }}
+                style={{ cursor: 'default', background: hoveredId === r.id ? '#161b22' : 'transparent' }}
+                onMouseEnter={() => setHoveredId(r.id)}
+                onMouseLeave={() => setHoveredId(null)}
               >
                 <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: '11px', color: '#8b949e', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.id}</td>
                 <td style={tdStyle}><TypeBadge runType={r.run_type} /></td>

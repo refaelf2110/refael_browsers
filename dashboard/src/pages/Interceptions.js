@@ -17,6 +17,7 @@ const tdStyle = {
 export default function Interceptions() {
   const [sessions, setSessions] = useState(null);
   const [error, setError] = useState(null);
+  const [hoveredId, setHoveredId] = useState(null);
 
   useEffect(() => {
     getInterceptions()
@@ -56,8 +57,9 @@ export default function Interceptions() {
             {sessions.map(s => (
               <tr
                 key={s.id}
-                onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(td => { td.style.background = '#161b22'; })}
-                onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(td => { td.style.background = 'transparent'; })}
+                style={{ background: hoveredId === s.id ? '#161b22' : 'transparent' }}
+                onMouseEnter={() => setHoveredId(s.id)}
+                onMouseLeave={() => setHoveredId(null)}
               >
                 <td style={tdStyle}>{s.id}</td>
                 <td style={tdStyle}>

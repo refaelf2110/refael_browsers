@@ -105,7 +105,6 @@ async function getInterceptionById(id) {
   );
   if (!session) return { statusCode: 404, body: { error: `Session ${id} not found` } };
 
-  const { action, fn, limit = '500', offset = '0' } = {};
   const calls = await runQuery(
     `SELECT * FROM interceptions WHERE session_id = '${session.id}' ORDER BY seq LIMIT 500`
   );

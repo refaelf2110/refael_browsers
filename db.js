@@ -411,7 +411,7 @@ const PARQUET_SCHEMAS = {
     platform:     { type: 'UTF8' },
   },
   results: {
-    id:          { type: 'UTF8' },
+    id:          { type: 'INT32' },
     run_id:      { type: 'UTF8' },
     framework:   { type: 'UTF8' },
     label:       { type: 'UTF8' },
@@ -421,7 +421,7 @@ const PARQUET_SCHEMAS = {
     error:       { type: 'UTF8', optional: true },
   },
   window_elements: {
-    id:            { type: 'UTF8' },
+    id:            { type: 'INT32' },
     browser_label: { type: 'UTF8' },
     collected_at:  { type: 'UTF8' },
     name:          { type: 'UTF8', optional: true },
@@ -430,7 +430,7 @@ const PARQUET_SCHEMAS = {
     raw:           { type: 'UTF8' },
   },
   interception_sessions: {
-    id:            { type: 'UTF8' },
+    id:            { type: 'INT32' },
     framework:     { type: 'UTF8' },
     browser_label: { type: 'UTF8' },
     started_at:    { type: 'UTF8' },
@@ -439,8 +439,8 @@ const PARQUET_SCHEMAS = {
     call_count:    { type: 'INT32' },
   },
   interceptions: {
-    id:             { type: 'UTF8' },
-    session_id:     { type: 'UTF8' },
+    id:             { type: 'INT32' },
+    session_id:     { type: 'INT32' },
     seq:            { type: 'INT32' },
     action:         { type: 'UTF8' },
     fn_name:        { type: 'UTF8' },
@@ -451,7 +451,7 @@ const PARQUET_SCHEMAS = {
     is_constructor: { type: 'BOOLEAN' },
     duration_ms:    { type: 'DOUBLE' },
     stack:          { type: 'UTF8', optional: true },
-    triggered_at:   { type: 'UTF8' },
+    triggered_at:   { type: 'DOUBLE' },
   },
 };
 
@@ -479,22 +479,26 @@ async function uploadTableToS3(s3, bucket, tableName, rows, jobId) {
   const parquet = require('@dsnp/parquetjs');
   const { PutObjectCommand } = require('@aws-sdk/client-s3');
   const schemaDef = PARQUET_SCHEMAS[tableName];
-  const schema    = new parquet.ParquetSchema(schemaDef);
-  const tmpFile   = path.join(os.tmpdir(), `${tableName}-${jobId}.parquet`);
+  if (!schemaDef) throw new Error(`No Parquet schema defined for table: ${tableName}`);
+  const schema  = new parquet.ParquetSchema(schemaDef);
+  const tmpFile = path.join(os.tmpdir(), `${tableName}-${jobId}.parquet`);
 
-  const writer = await parquet.ParquetWriter.openFile(schema, tmpFile);
-  for (const row of rows) await writer.appendRow(coerceParquetRow(schemaDef, row));
-  await writer.close();
+  try {
+    const writer = await parquet.ParquetWriter.openFile(schema, tmpFile);
+    for (const row of rows) await writer.appendRow(coerceParquetRow(schemaDef, row));
+    await writer.close();
 
-  const s3Key = `${tableName}/${jobId}.parquet`;
-  await s3.send(new PutObjectCommand({
-    Bucket:      bucket,
-    Key:         s3Key,
-    Body:        fs.readFileSync(tmpFile),
-    ContentType: 'application/octet-stream',
-  }));
-  fs.unlinkSync(tmpFile);
-  console.log(`[s3] Uploaded ${rows.length} rows → s3://${bucket}/${s3Key}`);
+    const s3Key = `${tableName}/${jobId}.parquet`;
+    await s3.send(new PutObjectCommand({
+      Bucket:      bucket,
+      Key:         s3Key,
+      Body:        fs.readFileSync(tmpFile),
+      ContentType: 'application/octet-stream',
+    }));
+    console.log(`[s3] Uploaded ${rows.length} rows → s3://${bucket}/${s3Key}`);
+  } finally {
+    if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+  }
 }
 
 /**
